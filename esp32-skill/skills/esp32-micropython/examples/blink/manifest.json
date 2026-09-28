@@ -1,0 +1,20 @@
+{
+  "schema": 1,
+  "name": "blink",
+  "title": "LED Blink",
+  "description": "Minimal MicroPython example that blinks an LED on GPIO2. Use as a baseline to verify toolchain, file upload, and board functionality.",
+  "target_chip": "ESP32 (classic)",
+  "validated": true,
+  "validation_level": "hardware_debug",
+  "complexity": "beginner",
+  "peripherals": ["GPIO"],
+  "pins": ["GPIO2"],
+  "source_files": ["main.py"],
+  "parameters": {
+    "led_pin": "GPIO2 (adjust for your board)",
+    "blink_period_ms": 1000,
+    "on_time_ms": 500,
+    "off_time_ms": 500
+  },
+  "tags": ["blink", "gpio", "led", "baseline", "minimal", "getting-started"]
+}

@@ -1,0 +1,155 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 170" width="720" height="170" role="img" aria-labelledby="esLogoTitle">
+  <title id="esLogoTitle">Embedded Agent Skill — STM32 / ESP32</title>
+
+  <style>
+    /* ---------------------------------------------------------------
+       纯 CSS 动画（无 JavaScript）。GitHub 会剥离 SVG 中的 script 标签，
+       但保留 CSS 动画，因此作为图片嵌入 README 时仍会播放。
+       静态基线为「最终可见状态」：若样式被剥离，仍是一个完整的静态 logo。
+       --------------------------------------------------------------- */
+
+    /* 线条自绘：芯片本体 */
+    @keyframes drawBody { from { stroke-dashoffset: 308; } to { stroke-dashoffset: 0; } }
+    /* 线条自绘：内核 */
+    @keyframes drawDie  { from { stroke-dashoffset: 206; } to { stroke-dashoffset: 0; } }
+    /* 线条自绘：外部走线 */
+    @keyframes drawTrace { from { stroke-dashoffset: 30; } to { stroke-dashoffset: 0; } }
+    /* 线条自绘：内部走线 */
+    @keyframes drawInner { from { stroke-dashoffset: 12; } to { stroke-dashoffset: 0; } }
+
+    .drawBody  { stroke-dasharray: 308; animation: drawBody  .78s cubic-bezier(.65,0,.35,1) both; }
+    .drawDie   { stroke-dasharray: 206; animation: drawDie   .62s cubic-bezier(.65,0,.35,1) both; }
+    .drawTrace { stroke-dasharray: 30;  animation: drawTrace .50s cubic-bezier(.65,0,.35,1) both; }
+    .drawInner { stroke-dasharray: 12;  animation: drawInner .38s cubic-bezier(.65,0,.35,1) both; }
+
+    /* 引脚 / 焊盘 / 核心 弹出 */
+    @keyframes pop {
+      from { opacity: 0; transform: scale(.35); }
+      to   { opacity: 1; transform: scale(1); }
+    }
+    .pop {
+      transform-box: fill-box;
+      transform-origin: center;
+      animation: pop .42s cubic-bezier(.34,1.56,.64,1) both;
+    }
+
+    /* 电流沿走线流动（常驻） */
+    @keyframes flow { from { stroke-dashoffset: 30; } to { stroke-dashoffset: 0; } }
+    .flow {
+      stroke-dasharray: 9 21;
+      animation: flow 1.5s linear infinite;
+    }
+
+    /* 核心呼吸（常驻） */
+    @keyframes breathe {
+      0%, 100% { opacity: .5;  transform: scale(.85); }
+      50%      { opacity: 1;   transform: scale(1.15); }
+    }
+    .breathe {
+      transform-box: fill-box;
+      transform-origin: center;
+      animation: breathe 2.6s ease-in-out 2.6s infinite;
+    }
+
+    /* 文字上浮 */
+    @keyframes rise {
+      from { opacity: 0; transform: translateY(9px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .rise { animation: rise .55s cubic-bezier(.22,1,.36,1) both; }
+
+    /* 动画开始前的隐藏态由 backwards 填充提供，
+       元素自身的静态基线保持可见，保证无 CSS 时仍显示完整 logo */
+
+    @media (prefers-reduced-motion: reduce) {
+      .drawBody, .drawDie, .drawTrace, .drawInner, .pop, .rise, .breathe { animation: none !important; }
+      .flow { display: none; }
+    }
+  </style>
+
+  <!-- ============ 左侧：芯片图形 ============ -->
+
+  <!-- 外部走线 -->
+  <g stroke="#0891B2" stroke-width="2" stroke-linecap="round" opacity=".5">
+    <line class="drawTrace" x1="153" y1="61"  x2="183" y2="61"  style="animation-delay:.95s"/>
+    <line class="drawTrace" x1="153" y1="85"  x2="183" y2="85"  style="animation-delay:1.03s"/>
+    <line class="drawTrace" x1="153" y1="109" x2="183" y2="109" style="animation-delay:1.11s"/>
+    <line class="drawTrace" x1="291" y1="61"  x2="321" y2="61"  style="animation-delay:1.19s"/>
+    <line class="drawTrace" x1="291" y1="85"  x2="321" y2="85"  style="animation-delay:1.27s"/>
+    <line class="drawTrace" x1="291" y1="109" x2="321" y2="109" style="animation-delay:1.35s"/>
+  </g>
+
+  <!-- 电流（覆在走线上） -->
+  <g stroke="#67E8F9" stroke-width="2.4" stroke-linecap="round" fill="none">
+    <line class="flow" x1="153" y1="61"  x2="183" y2="61"  style="animation-delay:0s"/>
+    <line class="flow" x1="153" y1="85"  x2="183" y2="85"  style="animation-delay:.25s"/>
+    <line class="flow" x1="153" y1="109" x2="183" y2="109" style="animation-delay:.5s"/>
+    <line class="flow" x1="291" y1="61"  x2="321" y2="61"  style="animation-delay:.12s"/>
+    <line class="flow" x1="291" y1="85"  x2="321" y2="85"  style="animation-delay:.37s"/>
+    <line class="flow" x1="291" y1="109" x2="321" y2="109" style="animation-delay:.62s"/>
+  </g>
+
+  <!-- 焊盘 -->
+  <g fill="#22D3EE">
+    <circle class="pop" cx="150" cy="61"  r="3" style="animation-delay:1.05s"/>
+    <circle class="pop" cx="150" cy="85"  r="3" style="animation-delay:1.12s"/>
+    <circle class="pop" cx="150" cy="109" r="3" style="animation-delay:1.19s"/>
+    <circle class="pop" cx="324" cy="61"  r="3" style="animation-delay:1.26s"/>
+    <circle class="pop" cx="324" cy="85"  r="3" style="animation-delay:1.33s"/>
+    <circle class="pop" cx="324" cy="109" r="3" style="animation-delay:1.40s"/>
+  </g>
+
+  <!-- 引脚 -->
+  <g fill="#0891B2">
+    <rect class="pop" x="183" y="58"  width="14" height="6" rx="3" style="animation-delay:.45s"/>
+    <rect class="pop" x="183" y="82"  width="14" height="6" rx="3" style="animation-delay:.52s"/>
+    <rect class="pop" x="183" y="106" width="14" height="6" rx="3" style="animation-delay:.59s"/>
+    <rect class="pop" x="277" y="58"  width="14" height="6" rx="3" style="animation-delay:.66s"/>
+    <rect class="pop" x="277" y="82"  width="14" height="6" rx="3" style="animation-delay:.73s"/>
+    <rect class="pop" x="277" y="106" width="14" height="6" rx="3" style="animation-delay:.80s"/>
+  </g>
+
+  <!-- 芯片本体 -->
+  <rect class="drawBody" x="197" y="43" width="80" height="84" rx="12"
+        fill="#0891B2" fill-opacity=".07" stroke="#0891B2" stroke-width="2"
+        style="animation-delay:0s"/>
+
+  <!-- 内部走线（引脚 → 内核） -->
+  <g stroke="#0891B2" stroke-width="1.6" stroke-linecap="round" opacity=".75">
+    <line class="drawInner" x1="197" y1="61"  x2="209" y2="61"  style="animation-delay:1.45s"/>
+    <line class="drawInner" x1="197" y1="85"  x2="209" y2="85"  style="animation-delay:1.51s"/>
+    <line class="drawInner" x1="197" y1="109" x2="209" y2="109" style="animation-delay:1.57s"/>
+    <line class="drawInner" x1="265" y1="61"  x2="277" y2="61"  style="animation-delay:1.63s"/>
+    <line class="drawInner" x1="265" y1="85"  x2="277" y2="85"  style="animation-delay:1.69s"/>
+    <line class="drawInner" x1="265" y1="109" x2="277" y2="109" style="animation-delay:1.75s"/>
+  </g>
+
+  <!-- 内核 -->
+  <rect class="drawDie" x="209" y="59" width="56" height="52" rx="6"
+        fill="#0891B2" fill-opacity=".1" stroke="#0891B2" stroke-width="1.6"
+        style="animation-delay:.55s"/>
+
+  <!-- 核心脉冲 -->
+  <g class="pop" style="animation-delay:1.95s">
+    <circle class="breathe" cx="237" cy="85" r="7" fill="#67E8F9" opacity=".9"/>
+  </g>
+
+  <!-- ============ 右侧：字标 ============ -->
+
+  <g font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'DejaVu Sans Mono', monospace"
+     font-size="36" font-weight="700" fill="#0891B2" text-anchor="start">
+    <text class="rise" x="367" y="85" style="animation-delay:2.20s">E</text>
+    <text class="rise" x="393" y="85" style="animation-delay:2.26s">M</text>
+    <text class="rise" x="419" y="85" style="animation-delay:2.32s">B</text>
+    <text class="rise" x="445" y="85" style="animation-delay:2.38s">E</text>
+    <text class="rise" x="471" y="85" style="animation-delay:2.44s">D</text>
+    <text class="rise" x="497" y="85" style="animation-delay:2.50s">D</text>
+    <text class="rise" x="523" y="85" style="animation-delay:2.56s">E</text>
+    <text class="rise" x="549" y="85" style="animation-delay:2.62s">D</text>
+  </g>
+
+  <text class="rise" x="369" y="115"
+        font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'DejaVu Sans Mono', monospace"
+        font-size="17" fill="#64748B" textLength="202" lengthAdjust="spacing"
+        style="animation-delay:2.78s">AGENT SKILL</text>
+</svg>

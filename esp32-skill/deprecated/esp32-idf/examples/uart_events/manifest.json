@@ -1,0 +1,30 @@
+{
+  "schema": 1,
+  "name": "uart_events",
+  "title": "UART Event-Driven Receive with Echo",
+  "description": "Verified UART event-driven receive example using the ESP-IDF UART driver with an event queue. Receives data asynchronously, echoes it back, supports a 'reset' command, and includes an LED heartbeat task. Demonstrates proper task-based UART handling with ring buffer and overflow recovery.",
+  "target_chip": "any (set with idf.py set-target)",
+  "validated": true,
+  "validation_level": "hardware_debug",
+  "complexity": "intermediate",
+  "clock": {
+    "cpuclk_hz": 240000000,
+    "flash_freq_hz": 80000000
+  },
+  "peripherals": ["UART", "GPIO"],
+  "pins": ["UART0 TX/RX (default)", "GPIO2 (LED)"],
+  "source_files": ["main/main.c"],
+  "sdkconfig_defaults": "sdkconfig.defaults",
+  "parameters": {
+    "uart_num": "UART_NUM_0",
+    "baud": 115200,
+    "format": "8N1",
+    "rx_buffer_size": 4096,
+    "tx_buffer_size": 2048,
+    "event_queue_size": 20,
+    "led_pin": "GPIO2",
+    "commands": ["reset (soft restart)"]
+  },
+  "generated_names": [],
+  "tags": ["uart", "event-driven", "echo", "serial", "ring-buffer", "interrupt", "task", "freertos", "smoke-test"]
+}

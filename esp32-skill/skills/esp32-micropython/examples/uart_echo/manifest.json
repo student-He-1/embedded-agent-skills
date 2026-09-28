@@ -1,0 +1,21 @@
+{
+  "schema": 1,
+  "name": "uart_echo",
+  "title": "UART Echo",
+  "description": "UART1 echo example using GPIO17 TX and GPIO16 RX. Receives data on UART1 and echoes it back. Demonstrates UART initialization, non-blocking read, and TX/RX crossover wiring.",
+  "target_chip": "ESP32 (classic)",
+  "validated": true,
+  "validation_level": "hardware_debug",
+  "complexity": "beginner",
+  "peripherals": ["UART"],
+  "pins": ["GPIO17 (TX)", "GPIO16 (RX)"],
+  "source_files": ["main.py"],
+  "parameters": {
+    "uart_num": 1,
+    "tx_pin": 17,
+    "rx_pin": 16,
+    "baud": 115200,
+    "format": "8N1"
+  },
+  "tags": ["uart", "echo", "serial", "uart1", "non-blocking", "smoke-test"]
+}

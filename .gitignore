@@ -1,0 +1,42 @@
+# ============================================================
+# 嵌入式 Agent Skill 仓库 — 忽略规则
+#
+# 原则：源码、脚本、文档、例程工程文件纳入版本控制；
+#       编译产物与 IDE 状态文件忽略（可由各 skill 的 build 脚本重新生成）。
+# ============================================================
+
+# ---------- Keil MDK-uVision ----------
+# MDK-ARM 下的子目录均为生成物：目标输出目录、DebugConfig
+**/MDK-ARM/*/
+# 工程文件本身要保留
+!**/MDK-ARM/*.uvprojx
+**/*.uvoptx
+**/*.uvguix.*
+**/*_build.log
+**/*.build_log.htm
+**/*.dep
+**/*.lnp
+
+# ---------- Arduino ----------
+**/build/
+**/*.bin
+**/*.elf
+**/*.hex
+**/*.map
+
+# ---------- ESP-IDF ----------
+**/sdkconfig.old
+**/managed_components/
+**/dependencies.lock
+
+# ---------- Python ----------
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# ---------- OS / 编辑器 ----------
+Thumbs.db
+.DS_Store
+*.swp
+*.tmp

@@ -1,0 +1,20 @@
+{
+  "schema": 1,
+  "name": "wifi_sta",
+  "title": "WiFi Station Connection",
+  "description": "WiFi STA mode connection example. Connects to a 2.4GHz WiFi network, prints IP configuration and signal strength. Includes timeout handling and connection status reporting. Requires user to set SSID and password.",
+  "target_chip": "ESP32 (classic)",
+  "validated": true,
+  "validation_level": "hardware_debug",
+  "complexity": "beginner",
+  "peripherals": ["WiFi", "GPIO"],
+  "pins": ["GPIO2 (status LED)"],
+  "source_files": ["main.py"],
+  "parameters": {
+    "wifi_ssid": "USER_CONFIGURED",
+    "wifi_password": "USER_CONFIGURED",
+    "connection_timeout_s": 20,
+    "status_led_pin": 2
+  },
+  "tags": ["wifi", "sta", "network", "internet", "connection", "ssid", "beginner"]
+}

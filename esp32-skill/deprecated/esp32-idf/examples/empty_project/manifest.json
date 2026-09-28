@@ -1,0 +1,24 @@
+{
+  "schema": 1,
+  "name": "empty_project",
+  "title": "Empty Project with LED Blink",
+  "description": "Minimal ESP-IDF baseline project that blinks an LED on GPIO2. Use as a starting point for new projects or to verify toolchain, flashing, and serial monitor.",
+  "target_chip": "any (set with idf.py set-target)",
+  "validated": true,
+  "validation_level": "hardware_debug",
+  "complexity": "beginner",
+  "clock": {
+    "cpuclk_hz": 240000000,
+    "flash_freq_hz": 80000000
+  },
+  "peripherals": ["GPIO"],
+  "pins": ["GPIO2"],
+  "source_files": ["main/main.c"],
+  "sdkconfig_defaults": "sdkconfig.defaults",
+  "parameters": {
+    "led_pin": "GPIO2 (adjust for your board)",
+    "blink_period_ms": 1000,
+    "log_tag": "empty"
+  },
+  "tags": ["blink", "gpio", "baseline", "minimal", "getting-started", "led"]
+}
