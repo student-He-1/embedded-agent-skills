@@ -125,11 +125,24 @@ GPIO48 同时是 WS2812 数据线和 Octal PSRAM 的 **SPICLK_N**，二者不能
 - **Board**：`ESP32S3 Dev Module`
 - **FQBN**：`esp32:esp32:esp32s3`
 - **PSRAM**：`OPI PSRAM`（默认，启用 8MB）
-- **USB Mode**：`Hardware CDC and JTAG`（`USBMode=hwcdc`，否则 `Serial` 不输出到原生 USB）
+- **USB Mode**：`Hardware CDC and JTAG`（`USBMode=hwcdc`）
+- **USB CDC On Boot**：`Enabled`（`CDCOnBoot=cdc`）
 - **Upload Mode**：UART0 / USB-Serial-JTAG
 - 常用完整 FQBN：
-  - 启用 PSRAM：`esp32:esp32:esp32s3:PSRAM=opi,USBMode=hwcdc`
-  - 禁用 PSRAM（用板载 RGB）：`esp32:esp32:esp32s3:PSRAM=disabled,USBMode=hwcdc`
+  - 启用 PSRAM：`esp32:esp32:esp32s3:PSRAM=opi,USBMode=hwcdc,CDCOnBoot=cdc`
+  - 禁用 PSRAM（用板载 RGB）：`esp32:esp32:esp32s3:PSRAM=disabled,USBMode=hwcdc,CDCOnBoot=cdc`
+
+> **`CDCOnBoot=cdc` 不能省（已实测踩坑）**
+>
+> `USBMode=hwcdc` 只决定 USB 控制器以 USB-Serial/JTAG 方式工作，**真正决定 `Serial` 映射到哪里的是 `CDCOnBoot`**。
+> 它的默认值是 `Disabled`，此时 `Serial` 仍然是 `HardwareSerial`（UART0 → GPIO43/44），
+> `Serial.println()` 完全不会出现在原生 USB 串口上，表现为串口监视器一行输出都没有，
+> 而且**编译期没有任何报错**，很容易误判成"程序没跑 / 板子坏了"。
+> 只有加上 `CDCOnBoot=cdc`，`Serial` 才映射为 `HWCDC`，输出才会走 USB。
+>
+> 顺带一个相关坑：`Serial.setTxTimeoutMs(0)` 只有在 `Serial` 是 `HWCDC` 时才有这个成员；
+> 若 `CDCOnBoot` 没开，`Serial` 是 `HardwareSerial`，这行会直接编译报错
+> `'class HardwareSerial' has no member named 'setTxTimeoutMs'`——反过来也可以用它来判断当前映射。
 
 ## 已验证项
 

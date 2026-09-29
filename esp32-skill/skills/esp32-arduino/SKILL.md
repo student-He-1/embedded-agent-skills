@@ -10,7 +10,7 @@ Use this skill for ESP32 / ESP32-S3 firmware projects that use the Arduino frame
 ## Default Workflow
 
 1. Detect connected boards: `python scripts/detect_board.py`. Identify chip model (ESP32 / ESP32-S3 / ESP32-C3 / etc.), serial port, MAC, Flash/PSRAM size, and USB mode.
-2. Locate the project `.ino` entrypoint, `platform.local.txt` overrides, and library dependencies. Run `python scripts/check_arduino_project.py <project-dir>` for static validation.
+2. Locate the project `.ino` entrypoint, `platform.local.txt` overrides, and library dependencies. Run `python scripts/check_arduino_project.py <project-dir>` for static validation (add `--chip` when the target chip is not obvious from the sources).
 3. Read the project's existing board configuration (FQBN, port, upload speed). If missing, derive from detected hardware and confirm with the user.
 4. Modify only the requested source surface. Preserve unrelated code, comments, copyright headers, and project layout.
 5. Compile: `python scripts/arduino_build.py <project-dir> --fqbn <fqbn>`. Report warnings separately from errors.
@@ -52,7 +52,8 @@ Use this skill for ESP32 / ESP32-S3 firmware projects that use the Arduino frame
   - Choose based on project requirements. Do not silently disable PSRAM; explain the trade-off.
   - For projects that need both PSRAM and an LED, use an external LED on another GPIO pin.
 - GPIO46 is often labeled "LOG" on dev boards (debug log output).
-- ESP32-S3-N16R8 = 16MB Flash + 8MB Octal PSRAM. Select `ESP32S3 Dev Module` with PSRAM = OPI PSRAM.
+- ESP32-S3-N16R8 = 16MB Flash + 8MB Octal PSRAM. Select `ESP32S3 Dev Module` with PSRAM = OPI PSRAM. Recommended FQBN: `esp32:esp32:esp32s3:PSRAM=opi,USBMode=hwcdc,CDCOnBoot=cdc`.
+- **`CDCOnBoot=cdc` is mandatory for serial output on the native USB port.** `USBMode=hwcdc` alone does not map `Serial` onto USB: with the default `CDCOnBoot=Disabled`, `Serial` is still `HardwareSerial` (UART0 → GPIO43/44), so the port stays completely silent with no build error. Do not conclude "the sketch didn't run / the board is broken" before checking this.
 - ADC1 pins: GPIO0–GPIO7, GPIO16–GPIO21. ADC2 is unavailable when WiFi is on.
 
 ### ESP32-C3 (RISC-V single-core)
@@ -133,7 +134,7 @@ When applying an example to a user project:
 Run bundled scripts with Python 3.10 or newer. `serial_monitor.py` additionally requires `pyserial`; if import fails, tell the user to run `python -m pip install pyserial`. Arduino IDE / arduino-cli and the ESP32 core remain external dependencies and are not installed by this skill.
 
 - `python scripts/detect_board.py`: read-only connected-board detection using `arduino-cli board list` and `esptool chip_id`. Reports chip model, port, MAC, Flash/PSRAM, USB mode. An empty result is explicitly inconclusive.
-- `python scripts/check_arduino_project.py <project-dir>`: static project check for `.ino` entrypoint, library includes vs installed libs, FQBN hints, common mistakes (missing `setup()`/`loop()`, using input-only pins as output, etc.).
+- `python scripts/check_arduino_project.py <project-dir> [--chip esp32|esp32s3]`: static project check for `.ino` entrypoint, library includes vs installed libs, common mistakes (missing `setup()`/`loop()`, using input-only pins as output, etc.). Pin rules are **chip-specific** and chosen via `--chip` (default `auto`, inferred from the project sources). If the chip cannot be determined the pin checks are skipped rather than run against the wrong chip's rules — e.g. GPIO6–11 are flash pins on classic ESP32 but are free GPIO on ESP32-S3.
 - `python scripts/arduino_build.py <project-dir> --fqbn <fqbn>`: compile wrapper around `arduino-cli compile`. Captures warnings and errors separately.
 - `python scripts/arduino_upload.py <project-dir> --port <port> --fqbn <fqbn>`: flash wrapper. Verifies the port is present before uploading.
 - `python scripts/serial_monitor.py --port <port> --baud 115200 --duration 10`: read serial output for a fixed duration. Useful for verifying `Serial.println()` output after flash.

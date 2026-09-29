@@ -111,8 +111,8 @@ esp32-arduino/
 # 1. 探测板子
 python scripts/detect_board.py
 
-# 2. 检查工程
-python scripts/check_arduino_project.py examples/<name>
+# 2. 检查工程（--chip 可选，默认从源码自动推断目标芯片）
+python scripts/check_arduino_project.py examples/<name> --chip esp32s3
 
 # 3. 编译（FQBN 根据芯片选择）
 python scripts/arduino_build.py examples/<name> --fqbn esp32:esp32:esp32s3
@@ -132,8 +132,15 @@ python scripts/serial_monitor.py --port <PORT> --baud 115200 --duration 6
 | ESP32-S3 | `esp32:esp32:esp32s3` |
 | ESP32-C3 | `esp32:esp32:esp32c3` |
 
-S3 带 Octal PSRAM 的模块（如 N16R8）选 `ESP32S3 Dev Module` 并在
-`--build-property` 中设置 PSRAM=opi。
+S3 带 Octal PSRAM 的模块（如 N16R8）选 `ESP32S3 Dev Module`，完整 FQBN 建议用：
+
+```
+esp32:esp32:esp32s3:PSRAM=opi,USBMode=hwcdc,CDCOnBoot=cdc
+```
+
+> **`CDCOnBoot=cdc` 不能省**：默认 `Disabled` 时 `Serial` 仍是 `HardwareSerial`
+> （UART0 → GPIO43/44），原生 USB 串口一行输出都没有，而且编译不报错，
+> 极易误判成"程序没跑"。详见 `references/board_esp32s3_n16r8.md`。
 
 ## 6. GitHub 推送
 

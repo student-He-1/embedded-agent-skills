@@ -22,6 +22,7 @@ Validated combinations:
 - Serial: COM6 (typical, may re-enumerate after reset)
 - Arduino core: 3.3.10-cn
 - Verified: compile, flash, serial output, WS2812 RGB LED (GPIO48, with PSRAM disabled)
+- **Working FQBN**: `esp32:esp32:esp32s3:PSRAM=opi,USBMode=hwcdc,CDCOnBoot=cdc` (use `PSRAM=disabled` instead when driving the onboard WS2812). `CDCOnBoot=cdc` is mandatory — see the serial monitor notes below.
 - **Onboard WS2812 RGB LED on GPIO48**: This board (ESP32-S3-WROOM-1-N16R8) has a WS2812 RGB LED wired to GPIO48. However, GPIO48 is also SPICLK_N for Octal PSRAM. When OPI PSRAM is enabled (Tools → PSRAM → OPI PSRAM), GPIO48 is claimed by the PSRAM peripheral and the WS2812 **will not light up**. To use the onboard RGB LED:
   - Set Tools → PSRAM → **Disabled**
   - Use Adafruit_NeoPixel library on GPIO48, type NEO_GRB + NEO_KHZ800
@@ -110,7 +111,10 @@ When onboard LED is unavailable or uncertain:
 - Crash dumps are at 115200
 - If serial output is garbled, check baud rate match
 - If only `ESP-ROM:esp32s3-...` appears but no app output, the app may have crashed before `Serial.begin()` or `setup()` didn't reach `Serial.println()`
+- **ESP32-S3 native USB shows nothing at all: check `CDCOnBoot` first.** `USBMode=hwcdc` only selects the USB-Serial/JTAG controller; it does not map `Serial` onto it. With the default `CDCOnBoot=Disabled`, `Serial` remains `HardwareSerial` (UART0 → GPIO43/44), so `Serial.println()` never reaches the USB port and the build reports no error at all. Use `CDCOnBoot=cdc`.
+- **Do not use `serial_monitor.py --reset` on ESP32-S3 native USB.** The DTR/RTS toggle is meant for a classic USB-UART bridge; on S3 it drives the native USB lines and drops the chip into `waiting for download` (observed `rst:0x15 (USB_UART_CHIP_RESET),boot:0x20 (DOWNLOAD(USB/UART0))`), after which the app stops running and the port stays silent. Re-flash (upload ends with a hard reset) to recover.
 - Add `delay(1000)` after `Serial.begin()` to give the monitor time to connect
+- On S3 native USB, `Serial.write()` blocks for up to ~20 × `tx_timeout_ms` when the host is not reading. Call `Serial.setTxTimeoutMs(0)` after `Serial.begin()` so serial logging can never stall `setup()`/`loop()`.
 
 ## Validation Levels
 

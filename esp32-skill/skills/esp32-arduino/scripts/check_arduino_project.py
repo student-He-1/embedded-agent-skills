@@ -19,16 +19,33 @@ class Message:
     line: int | None = None
 
 
-# ESP32 classic input-only pins
-ESP32_INPUT_ONLY = {34, 35, 36, 39}
-# ESP32 classic flash pins (never use)
-ESP32_FLASH_PINS = {6, 7, 8, 9, 10, 11}
-# ESP32-S3 flash pins
-ESP32S3_FLASH_PINS = {6, 7, 8, 9, 10, 11}
-# ESP32-S3 non-existent pins on QFN56
-ESP32S3_MISSING_PINS = set(range(22, 33))
-# Strapping pins (all variants)
-STRAPPING_PINS = {0, 2, 5, 12, 15, 45, 46}
+# Per-chip pin constraints. Only chips verified by this skill are listed.
+# An unrecognized chip gets NO chip-specific pin checks rather than being
+# checked against another chip's rules (that mismatch caused false errors,
+# e.g. GPIO6-11 flagged as flash pins on ESP32-S3).
+CHIP_PIN_RULES: dict[str, dict[str, set[int]]] = {
+    "esp32": {
+        "flash_pins": {6, 7, 8, 9, 10, 11},   # SPI flash, never usable as GPIO
+        "input_only": {34, 35, 36, 39},
+        "missing_pins": set(),
+        "strapping_pins": {0, 2, 5, 12, 15},
+    },
+    "esp32s3": {
+        # GPIO26-32 are Octal/Quad SPI flash + PSRAM.
+        # GPIO6-11 are FREE on ESP32-S3 -- they are flash pins only on classic ESP32.
+        "flash_pins": {26, 27, 28, 29, 30, 31, 32},
+        "input_only": set(),                  # ESP32-S3 has no input-only GPIO
+        "missing_pins": {22, 23, 24, 25},     # not present on the QFN56 package
+        "strapping_pins": {0, 3, 45, 46},
+    },
+}
+
+# Substrings used to infer the target chip from project sources.
+# Order matters: "esp32s3" must be tested before "esp32".
+CHIP_MARKERS: list[tuple[str, tuple[str, ...]]] = [
+    ("esp32s3", ("esp32s3", "esp32-s3")),
+    ("esp32", ("esp32",)),
+]
 
 KNOWN_ESP32_LIBS = {
     "WiFi.h", "WiFiClient.h", "WiFiServer.h", "WiFiUdp.h",
@@ -62,6 +79,15 @@ def find_source_files(root: Path) -> list[Path]:
     )
 
 
+def detect_chip(source_files: list[Path]) -> str:
+    """Best-effort chip inference from project sources. Returns "" when unknown."""
+    text = "\n".join(read_text(p).lower() for p in source_files)
+    for chip, markers in CHIP_MARKERS:
+        if any(marker in text for marker in markers):
+            return chip
+    return ""
+
+
 def extract_includes(source: str) -> list[str]:
     return re.findall(r'#include\s+[<"]([^>"]+)[>"]', source)
 
@@ -86,7 +112,7 @@ def extract_digital_writes(source: str) -> list[tuple[int, int]]:
     return results
 
 
-def check_project(project_dir: Path) -> list[Message]:
+def check_project(project_dir: Path, chip: str = "") -> list[Message]:
     messages: list[Message] = []
 
     if not project_dir.exists():
@@ -119,22 +145,40 @@ def check_project(project_dir: Path) -> list[Message]:
     if external_includes:
         messages.append(Message("info", f"Library dependencies: {', '.join(sorted(set(external_includes)))}"))
 
-    # Check pin usage
+    # Check pin usage against the target chip's rules
+    rules = CHIP_PIN_RULES.get(chip)
+    if rules:
+        messages.append(Message("info", f"Chip: {chip} (use --chip to override)"))
+    else:
+        messages.append(Message(
+            "info",
+            "Chip not determined - skipping chip-specific pin checks "
+            "(pass --chip esp32 / esp32s3 to enable them)",
+        ))
+
     all_pins = set()
     for pin, mode, line in extract_pin_modes(all_source):
         all_pins.add(pin)
-        if pin in ESP32_FLASH_PINS:
-            messages.append(Message("error", f"GPIO{pin} is connected to SPI flash. Never use as GPIO.", str(main_ino), line))
-        if pin in ESP32_INPUT_ONLY and mode == "OUTPUT":
-            messages.append(Message("error", f"GPIO{pin} is input-only on ESP32. Cannot use OUTPUT.", str(main_ino), line))
-        if pin in STRAPPING_PINS and mode == "OUTPUT":
+        if not rules:
+            continue
+        if pin in rules["flash_pins"]:
+            messages.append(Message("error", f"GPIO{pin} is used by SPI flash/PSRAM. Never use as GPIO.", str(main_ino), line))
+        if pin in rules["missing_pins"]:
+            messages.append(Message("error", f"GPIO{pin} does not exist on this package.", str(main_ino), line))
+        if pin in rules["input_only"] and mode == "OUTPUT":
+            messages.append(Message("error", f"GPIO{pin} is input-only on {chip}. Cannot use OUTPUT.", str(main_ino), line))
+        if pin in rules["strapping_pins"] and mode == "OUTPUT":
             messages.append(Message("warning", f"GPIO{pin} is a strapping pin. Output state at boot may affect boot mode.", str(main_ino), line))
 
     for pin, line in extract_digital_writes(all_source):
         all_pins.add(pin)
-        if pin in ESP32_FLASH_PINS:
-            messages.append(Message("error", f"GPIO{pin} is connected to SPI flash. Never use digitalWrite.", str(main_ino), line))
-        if pin in ESP32_INPUT_ONLY:
+        if not rules:
+            continue
+        if pin in rules["flash_pins"]:
+            messages.append(Message("error", f"GPIO{pin} is used by SPI flash/PSRAM. Never use as GPIO.", str(main_ino), line))
+        if pin in rules["missing_pins"]:
+            messages.append(Message("error", f"GPIO{pin} does not exist on this package.", str(main_ino), line))
+        if pin in rules["input_only"]:
             messages.append(Message("warning", f"GPIO{pin} is input-only. digitalWrite will have no effect.", str(main_ino), line))
 
     # Check for common mistakes
@@ -168,10 +212,20 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Static check for ESP32 Arduino projects")
     parser.add_argument("project_dir", help="Path to the Arduino project directory")
     parser.add_argument("--json", action="store_true", help="Output JSON")
+    parser.add_argument(
+        "--chip",
+        default="auto",
+        help="Target chip for pin checks: auto (infer from sources), esp32, esp32s3",
+    )
     args = parser.parse_args()
 
     project_dir = Path(args.project_dir).resolve()
-    messages = check_project(project_dir)
+
+    chip = args.chip
+    if chip == "auto":
+        chip = detect_chip(find_source_files(project_dir)) if project_dir.exists() else ""
+
+    messages = check_project(project_dir, chip)
 
     if args.json:
         print(json.dumps([asdict(m) for m in messages], indent=2, ensure_ascii=False))

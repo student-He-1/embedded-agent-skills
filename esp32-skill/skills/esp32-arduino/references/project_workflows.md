@@ -78,25 +78,30 @@ arduino-cli compile --fqbn esp32:esp32:esp32s3 `
   --build-property "build.flash_size=16MB" `
   --build-property "build.psram_type=opi" `
   --build-property "build.psram_size=8MB" `
-  --build-property "build.usb_mode=hwcdc" `
+  --build-property "build.usb_mode=1" `
+  --build-property "build.cdc_on_boot=1" `
   <project-dir>
 ```
 
-Or via FQBN menu options:
+Or via FQBN menu options (preferred):
 
 ```
-esp32:esp32:esp32s3:FlashSize=16MB,PSRAM=opi,USBMode=hwcdc
+esp32:esp32:esp32s3:FlashSize=16MB,PSRAM=opi,USBMode=hwcdc,CDCOnBoot=cdc
 ```
 
-**USB Mode is critical for S3:**
-- `hwcdc` (Hardware CDC and JTAG): `Serial` outputs to the native USB port (most common for S3 dev boards)
-- `default` / UART0: `Serial` outputs to GPIO1/GPIO3 UART (requires external USB-UART adapter)
-- If you see no serial output from the native USB port, verify USB Mode is set to Hardware CDC
+**USB Mode and USB CDC On Boot are both critical for S3:**
+
+- `USBMode=hwcdc` (Hardware CDC and JTAG): selects the USB-Serial/JTAG controller.
+- `CDCOnBoot=cdc`: maps `Serial` onto that USB port. **Without it `Serial` stays `HardwareSerial` (UART0 → GPIO43/44) and the native USB port shows no output at all** — there is no compile error, just silence, which is easily misread as "the sketch didn't run".
+- `USBMode=default` / UART0: `Serial` outputs to UART0 (GPIO43/44 on S3; GPIO1/GPIO3 on classic ESP32), which needs an external USB-UART adapter.
+- If you see no serial output from the native USB port, verify **both** USB Mode = Hardware CDC **and** USB CDC On Boot = Enabled.
+- A quick sanity check: `Serial.setTxTimeoutMs(0)` only compiles when `Serial` is `HWCDC`. If `CDCOnBoot` is not enabled the build fails with `'class HardwareSerial' has no member named 'setTxTimeoutMs'`.
 
 Select these in the IDE Tools menu:
 - Flash Size: 16MB
 - PSRAM: OPI PSRAM
 - USB Mode: Hardware CDC and JTAG
+- USB CDC On Boot: Enabled
 - Partition Scheme: choose based on needs (default is fine for most)
 
 ## Compile
@@ -251,7 +256,10 @@ Run the static checker first:
 
 ```powershell
 python scripts\check_arduino_project.py <project-dir>
+python scripts\check_arduino_project.py <project-dir> --chip esp32s3   # force the target chip
 ```
+
+The checker infers the target chip from the project sources. Pass `--chip esp32` / `--chip esp32s3` to force it. Pin checks are chip-specific and require a known chip — if the chip cannot be determined, pin checks are skipped instead of being run against the wrong chip's rules.
 
 Before flashing, detect connected boards:
 
