@@ -28,7 +28,7 @@ Validated combinations:
   - Use Adafruit_NeoPixel library on GPIO48, type NEO_GRB + NEO_KHZ800
   - Trade-off: loses 8MB PSRAM
 - The red power LED and blue serial TX indicator are separate from the WS2812 and are not user-controllable.
-- **Octal SPI pins**: GPIO26–GPIO32 are used for Octal Flash/PSRAM (SPICS1/SPIHD/SPIWP/SPICS0/SPICLK/SPIQ/SPID). Do not use. GPIO6–GPIO11 are available as normal GPIO on this board.
+- **Octal SPI pins**: GPIO26–GPIO32 are used for Octal Flash/PSRAM (SPICS1/SPIHD/SPIWP/SPICS0/SPICLK/SPIQ/SPID). Do not use them. GPIO6–GPIO11 are available as normal GPIO on this board.
 
 ## Board Detection
 
@@ -82,11 +82,11 @@ If auto-reset fails:
 - GPIO1/3 are UART0 — using them for GPIO breaks serial upload and debug.
 
 ### ESP32-S3
-- **GPIO48 WS2812 + PSRAM conflict (verified)**: GPIO48 has a WS2812 RGB LED. With OPI PSRAM enabled, GPIO48 is SPICLK_N and cannot drive the WS2812. Disable PSRAM to use the LED.
+- **GPIO48 WS2812 + PSRAM conflict (verified)**: GPIO48 has a WS2812 RGB LED and is the SPICLK_N IO-MUX function. With OPI PSRAM enabled the WS2812 does not light; with `PSRAM=disabled` Adafruit_NeoPixel drives it correctly. Record only what was measured — the official ESP-IDF GPIO summary table does **not** list GPIO47/GPIO48 as reserved (it flags GPIO26–32 and, for octal parts, GPIO33–37, plus GPIO19/20). So: GPIO48 is unusable as a WS2812/data line in this PSRAM configuration, and **GPIO47 must not be assumed reserved**.
 - GPIO26–GPIO32 are Octal SPI Flash/PSRAM pins — do not use on N16R8 boards.
 - GPIO6–GPIO11 are available as normal GPIO on Octal PSRAM boards (unlike Quad PSRAM boards).
 - GPIO19/20 are USB D-/D+ — do not use for GPIO when USB serial is active.
-- GPIO46 must be low at boot (strapping pin for SPI boot mode).
+- **GPIO46 in normal boot mode (GPIO0 high) is ignored** (Espressif esptool docs: "In normal boot mode (GPIO0 high), GPIO46 is ignored"). It must be left floating or driven low only to *enter the serial bootloader*, and it has an internal **weak pull-down**, not a pull-up. Do not document it as "must be high".
 - GPIO0 is BOOT button — low at boot = download mode.
 
 ### External LED verification

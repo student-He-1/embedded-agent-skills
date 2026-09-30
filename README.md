@@ -131,7 +131,6 @@ Copy-Item -Recurse -Force .\esp32-skill\skills\esp32-arduino $dest
 ├─ README.md
 ├─ .gitignore
 ├─ assets/logo.svg      # README 顶部的动态 logo（纯 CSS 动画）
-├─ 阶段性总结.md
 ├─ stm32-skill/
 │   ├─ 硬件信息_F407VET6开发板.md
 │   └─ skills/stm32-keil/
@@ -176,13 +175,13 @@ Agent 会按 `检测硬件 → 静态检查 → 编译 → 烧录 → 串口验�
 
 | 目标 | 结论 |
 | --- | --- |
-| STM32F407VET6 + J-Link OB（SWD）| ✅ 烧录验证通过；**必须 500 kHz**（1000 kHz+ 报 `Verification of RAMCode failed`）|
+| STM32F407VET6 + J-Link OB（SWD）| ✅ 烧录验证通过；**起始速率必须 500 kHz**（1000 kHz+ 报 `Verification of RAMCode failed`）。脚本默认从 500 kHz 起，失败会自动降到 200/100/50 kHz 重试 |
 | STM32 `rgy_flow` 流水灯 | ✅ 实机验证（ODR `0x01→0x02→0x08` 循环）|
 | STM32 `blink` / `uart_echo` / `pwm_led` | 编译通过，未单独实机烧录 |
 | ESP32 经典款（CP2102）| ✅ 编译 / 烧录 / GPIO2 闪烁 / 串口 |
 | ESP32-S3（WROOM-1-N16R8）| ✅ 编译 / 烧录 / 串口；板载 WS2812(GPIO48) 需禁用 PSRAM |
 | ESP32-C3 | 脚本兼容，未实机验证 |
-| MicroPython `blink` | ✅（固件 1.11.0）；`uart_echo` / `wifi_sta` 未验证 |
+| MicroPython `blink` | ✅ 实机验证（固件 **1.11.0**）；`uart_echo` / `wifi_sta` **未实机验证**（见各自 `manifest.json`） |
 
 > **端口号（COMx）与工具安装路径均因机器而异**，请以 `detect_probe.py` /
 > `detect_board.py` 的探测结果为准；文档与示例中的端口号仅作格式示例。

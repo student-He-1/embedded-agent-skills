@@ -41,7 +41,7 @@ mpremote connect COM3 exec "import machine; machine.soft_reset()"
 
 - **Pins**: Change `TX_PIN` and `RX_PIN`. UART1 can use most GPIO pins.
 - **Baud**: Change `BAUD` (common: 9600, 19200, 38400, 57600, 115200, 230400, 460800, 921600).
-- **UART instance**: Use UART2 by changing `UART_NUM = 2` (pins: TX=GPIO4, RX=GPIO36 or remap).
+- **UART instance**: `UART_NUM = 2`. On the classic ESP32 the UART2 default pins are **TX=GPIO17 / RX=GPIO16**; pass `tx=`/`rx=` to remap to other pins. (Caveat: GPIO34–39 are input-only and have **no internal pull-up**, so they cannot be UART TX and make a poor RX without an external pull-up. Prefer the defaults.)
 
 ## Troubleshooting
 

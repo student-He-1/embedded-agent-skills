@@ -7,6 +7,10 @@ Blinks the on-board user LED D2 on **PA1** (active low), ~1 s period.
 |--------|-----|------|
 | D2 user LED | PA1 | active **low** (drive low to light) |
 
+> PA1 is also the pin the `rgy_flow` example uses for its external yellow LED,
+> where it is driven **high** — so that example holds D2 *off*. If you wire
+> anything else to PA1 you are sharing the pin with the on-board LED circuit.
+
 Clock: HSI 16 MHz, PLL off.
 
 ## Build

@@ -24,10 +24,10 @@ CLI / 编辑器 Agent。参考 TI MSPM0 skill 模式构建。
 | 能力 | 能解决什么问题 |
 | --- | --- |
 | **自动探测板子** | 识别芯片型号、串口、MAC、Flash/PSRAM、USB 模式（arduino-cli + esptool） |
-| **工程静态检查** | 校验 `.ino` 入口、库依赖、FQBN 提示、常见引脚误用 |
+| **工程静态检查** | 校验 `.ino` 入口、库依赖，推断目标芯片（`--chip`，默认从源码自动识别）并按芯片区分引脚规则（S3 的 GPIO6~11 不再误报）|
 | **自动构建与烧录** | 固化 `arduino-cli compile` / `upload` 工作流，含烧后重新枚举检测 |
 | **串口闭环验证** | 固定时长串口捕获、可选发送，用于实机确认行为 |
-| **例程复用** | 自带经硬件验证的 GPIO / 串口 / WiFi 最小例程 |
+| **例程复用** | 自带最小例程（GPIO / 串口 / WiFi），**每个例程的验证级别在 `manifest.json` 与本表中单独标注** |
 | **引脚避坑** | 各芯片 strapping、Flash/PSRAM 占用、输入专用引脚的明确约束 |
 
 ## 安装
@@ -116,11 +116,14 @@ skills/esp32-arduino/
 
 ## 内置例程
 
-| 例程 | 内容 |
-| --- | --- |
-| `blink` | 板载 LED 周期闪烁，验证 GPIO / 编译 / 烧录 / 串口 |
-| `serial_echo` | 串口回显，验证 UART 收发 |
-| `wifi_sta` | STA 模式连接 WiFi，验证无线与网络 |
+| 例程 | 内容 | 验证级别 |
+| --- | --- | --- |
+| `blink` | LED 周期闪烁，验证 GPIO / 编译 / 烧录 / 串口 | 编译 ✅、烧录 ✅、**实机 LED 闪烁 ✅**（经典 ESP32 GPIO2；S3 需外接 LED） |
+| `serial_echo` | 串口回显，验证 UART 收发 | 编译 ✅、烧录 ✅、**实机串口回显 ✅**（ESP32-S3 原生 USB） |
+| `wifi_sta` | STA 模式连接 WiFi | 编译 ✅；**未实机验证**（需真实 SSID/密码） |
+
+> MicroPython 三个例程的验证级别见各自目录下的 `manifest.json`
+> （仅 `blink` 已实机验证）。
 
 ## 使用前须知
 

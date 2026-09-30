@@ -7,7 +7,7 @@
 
 | 项目 | 说明 |
 |------|------|
-| 开发板 | ESP32（Xtensa 双核）/ ESP32-S3（RISC-V 双核）/ ESP32-C3（RISC-V 单核） |
+| 开发板 | ESP32（Xtensa 双核）/ ESP32-S3（Xtensa LX7 双核）/ ESP32-C3（RISC-V 单核） |
 | 连接 | USB 数据线（注意：很多"充电线"只有电源没有数据线） |
 | 串口 | 板载 USB-Serial（CP210x/CH340）或 S3 原生 USB-Serial/JTAG |
 

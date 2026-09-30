@@ -256,7 +256,10 @@ If the board does not have MicroPython or needs an update:
 3. Flash firmware: `esptool.py --port COM3 --baud 460800 write_flash -z 0x1000 esp32-20240101-v1.22.1.bin`
 4. Reset the board and verify with `mpremote connect COM3 exec "import sys; print(sys.implementation)"`
 
-For ESP32-S3 with USB-JTAG, the flash offset may be `0x0` instead of `0x1000`. Check the firmware download page instructions.
+For **ESP32-S3 and ESP32-C3**, the firmware is written at offset **`0x0`**, not
+`0x1000` — use the exact offset given on the firmware's download page for your
+chip. Getting this wrong leaves the board apparently dead until you erase and
+re-flash (it is recoverable in download mode, but easy to misdiagnose).
 
 ## Ambiguous Requests
 
@@ -313,9 +316,18 @@ Run bundled scripts with Python 3.10 or newer. Requires `mpremote` (`pip install
 
 - `python scripts/detect_board.py`: detect connected ESP32, confirm MicroPython version, list board filesystem.
 - `python scripts/check_mp_project.py <project-dir>`: static check of local MicroPython project files.
-- `python scripts/mp_file_manager.py <project-dir> --port COM3 --upload`: upload project files to board.
-- `python scripts/serial_monitor.py --list`: list serial ports.
-- `python scripts/serial_monitor.py -p COM3 -b 115200`: open serial monitor.
+- `python scripts/mp_file_manager.py upload <project-dir> --port COM3`: upload project files to board. (Subcommands: `upload`, `list`, `reset`, `download`; add `--dry-run` to preview or `--reset` to soft-reset afterwards.)
+- `python scripts/serial_monitor.py --list`: list serial ports and exit.
+- `python scripts/serial_monitor.py -p COM3 -b 115200 [--duration N]`: open the
+  serial monitor. **`--duration` defaults to `0` = run forever** — always pass
+  `--duration` (e.g. `--duration 10`) in an automated verify step, or it will
+  block the workflow. Extra flags: `--timestamp`, `--no-ansi`, `--send TEXT`,
+  `--send-line`, `--send-hex "01 02"`.
+  (Note: the three `serial_monitor.py` copies are **not** interchangeable. STM32 uses
+  a fixed 10 s default and `--send` / `--send-newline` / `--send-hex`. The Arduino
+  copy also defaults to 10 s but has **no send flags at all** — only
+  `--port --baud --duration --timestamp --reset --list`. Only this MicroPython copy
+  has `--send-line` and a `0 = forever` default.)
 - `python scripts/list_examples.py`: list packaged examples.
 
 ## Safety Rules

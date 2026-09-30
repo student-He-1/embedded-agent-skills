@@ -78,16 +78,21 @@ Always verify with the board schematic or test with `Pin(n, Pin.OUT).on()`.
 
 ## Flash Layout
 
-Typical 4 MB flash layout for MicroPython:
+Typical 4 MB flash layout for MicroPython (classic ESP32):
 
 | Offset | Size | Content |
 |---|---|---|
-| 0x0000 | 4 KB | Bootloader (second stage) |
-| 0x1000 | ~1.5 MB | MicroPython firmware |
-| ~0x160000 | ~2 MB | FAT filesystem (where your .py files live) |
-| 0x3FF000 | 4 KB | WiFi calibration data (NVS) |
+| 0x1000 | ~28 KB | Bootloader (second stage) |
+| 0x8000 | 4 KB | Partition table |
+| 0x9000 | 4 KB | NVS |
+| 0x10000 | ~1.4 MB | MicroPython application (firmware) |
+| ~0x170000 | ~1 MB | FAT filesystem (where your .py files live) |
+| 0x3F0000 | 4 KB | phy_init (RF calibration data) |
 
-The filesystem is mounted at `/`. Files you upload go here.
+> These offsets are the classic-ESP32 ones (`write_flash -z 0x1000 ...`).
+> **ESP32-S3 and ESP32-C3 builds flash the application at `0x0` instead** —
+> use the offset printed on the firmware's download page for your chip.
+> The filesystem is mounted at `/`. Files you upload go here.
 
 Check free space:
 ```python

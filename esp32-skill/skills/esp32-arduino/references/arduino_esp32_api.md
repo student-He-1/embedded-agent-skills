@@ -28,7 +28,7 @@ int state = digitalRead(4);
 - GPIO19/20: USB D-/D+ (when USB serial enabled)
 - GPIO0, 3, 45, 46: strapping pins
 - GPIO22–25: do not exist on QFN56
-- **GPIO48**: WS2812 RGB LED on many S3 boards, but also SPICLK_N for Octal PSRAM. With OPI PSRAM enabled, GPIO48 cannot drive the WS2812. Disable PSRAM to use the LED.
+- **GPIO48**: WS2812 RGB LED on many S3 boards, and the SPICLK_N IO-MUX function. With OPI PSRAM enabled the WS2812 does not light (verified on N16R8); disable PSRAM to use the LED. Do not extend this to GPIO47 (SPICLK_P) — no evidence it is reserved.
 
 ### Interrupts
 
@@ -246,12 +246,17 @@ int raw = analogRead(34);  // 0-4095 (12-bit default)
 float voltage = raw * (3.3 / 4095.0);
 ```
 
-- ADC1 pins: GPIO32–39 (classic), GPIO1–10 (S3)
+- ADC1 pins: GPIO32–39 (classic), GPIO1–GPIO10 (S3, CH0–CH9)
 - ADC2 pins: GPIO0, 2, 4, 12–15, 25–27 (classic) — **not available when WiFi is on**
-- Input range: 0–3.3V (do not exceed)
-- Attenuation: `analogSetPinAttenuation(pin, ADC_11db)` for 0–3.3V range
-- ADC is non-linear near 0V and 3.3V; calibrate for precision
-- On S3, ADC2 is available when WiFi is off (unlike classic)
+- Input range: do not exceed 3.3V on any ADC pin
+- Attenuation: `analogSetPinAttenuation(pin, ADC_11db)` gives the widest range.
+  Note 11 dB saturates at roughly **3.1V**, not 3.3V — values near the rail clip
+- ADC is non-linear near 0V and the top of the range; calibrate for precision
+- On S3, ADC2 is **GPIO11–GPIO20** (ADC2 channel = GPIO number − 11) and, like the
+  classic ESP32, **it is also used by WiFi**: ESP-IDF documents that
+  `adc2_get_raw()` may fail between `esp_wifi_start()` and `esp_wifi_stop()`.
+  Prefer ADC1 (`GPIO1–GPIO10`) whenever WiFi may be active. GPIO0 and GPIO21 have
+  no ADC function on S3; GPIO14/15/16 are ADC2_CH3/CH4/CH5.
 
 ## Timers
 
@@ -329,7 +334,7 @@ void setup() {
 1. **`analogWrite()` deprecated** — use LEDC API on core 3.x
 2. **GPIO34–39 as output** — input only on classic ESP32
 3. **WiFi + ADC2 conflict** — ADC2 unavailable when WiFi is on (classic)
-4. **`delay()` in ISR** — will crash; use `vTaskDelayFromISR` or defer
+4. **`delay()` in ISR** — will crash; there is no ISR-safe delay. Defer work with `xTaskNotifyFromISR` / `xSemaphoreGiveFromISR`, or set a flag
 5. **Large local arrays** — stack overflow; use `static` or `malloc`
 6. **`while(!Serial)` on native USB** — blocks forever if no monitor opens
 7. **5V on GPIO** — ESP32 is 3.3V only; will damage the pin

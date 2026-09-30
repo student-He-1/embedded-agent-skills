@@ -21,8 +21,10 @@ generic STM32 advice.
 
 ## Serial
 
-- **J-Link CDC = COM16**, physically wired to **USART1 (PA9 TX / PA10 RX)**,
-  115200 8N1. Confirmed by capturing the graduation project's boot string.
+- **J-Link CDC = USART1 (PA9 TX / PA10 RX)**, 115200 8N1. Confirmed by capturing
+  the graduation project's boot string. The **COM number is machine-specific**
+  (`COM16` on the machine where this was measured) — always get it from
+  `python scripts/detect_probe.py`, never assume it.
 - The graduation project prints `LED Control Ready! Send R/G/Y` only ~1.5 s
   after reset (after a beep). If a monitor shows nothing, press RESET and wait.
 - No USB-to-UART bridge on the Type-C port (D+/D- go to PA12/PA11 = USB OTG FS).
@@ -50,10 +52,10 @@ Sampling repeatedly shows which pins toggle. This proved the RGY flow
 
 | Example | Build | Flash | Observed on board |
 |---------|-------|-------|-------------------|
-| blink   | OK    | OK    | compile only (superseded by rgy_flow) |
-| rgy_flow| OK    | OK    | **verified**: ODR 0x01/0x02/0x08 cycle (R=PA0,Y=PA1,G=PA3) |
-| uart_echo | OK  | n/a   | not flashed (needs COM16 session) |
-| pwm_led | OK    | n/a   | not flashed |
+| blink   | OK    | not flashed separately | none (superseded by rgy_flow) |
+| rgy_flow| OK    | OK    | **verified**: ODR 0x01/0x02/0x08 cycle (R=PA0,Y=PA1,G=PA3). PA1 is driven **high** here to light the external module, which holds on-board D2 **off** — see `examples/rgy_flow/README.md` |
+| uart_echo | OK  | not flashed | none (needs a live serial session on the detected port) |
+| pwm_led | OK    | not flashed | none |
 
 The user's private reference project (not in this repo) is **read-only** reference;
 never build into, write, or flash over it.

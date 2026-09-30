@@ -66,8 +66,9 @@ Exit REPL with `Ctrl+X` (or `Ctrl+]` on some terminals). In REPL:
 # List files on board
 mpremote connect COM3 fs ls
 
-# List with details (size, date)
-mpremote connect COM3 fs ls -l
+# List with details (recursive tree shows sizes)
+mpremote connect COM3 fs tree
+# Note: `fs ls` takes no -l flag; use `fs tree` (or `fs tree -v`) for detail.
 
 # Upload a file
 mpremote connect COM3 fs cp main.py :main.py
@@ -123,12 +124,17 @@ mpremote connect COM3 mip install --target /lib ssd1306
 ### Resetting
 
 ```powershell
-# Soft reset (re-runs boot.py and main.py)
-mpremote connect COM3 exec "import machine; machine.soft_reset()"
+# Soft reset (re-runs boot.py and main.py) — prefer the built-in command
+mpremote connect COM3 soft-reset
 
 # Hard reset (power-cycle equivalent)
-mpremote connect COM3 exec "import machine; machine.reset()"
+mpremote connect COM3 reset
 ```
+
+> Prefer `mpremote soft-reset` / `reset` over
+> `exec "import machine; machine.soft_reset()"`: the `exec` form can drop the
+> connection before the reply arrives. The `exec` form is still useful from the
+> REPL or when you are already in an interactive session.
 
 ## Uploading a Full Project
 
@@ -180,7 +186,7 @@ python -m mpremote connect COM3 exec "import sys; print(sys.implementation)"
 
 ### ESP32-S3 Note
 
-For ESP32-S3 with built-in USB-JTAG, the flash offset may be `0x0`. Check the download page for your specific firmware. If flashing fails at `0x1000`, try `0x0`.
+For ESP32-S3 and ESP32-C3, the firmware offset is **`0x0`** (the classic ESP32 uses `0x1000`). Use the exact offset on the download page for your chip — do not guess.
 
 ### Recovery from Bad Firmware
 

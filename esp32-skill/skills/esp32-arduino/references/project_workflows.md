@@ -71,23 +71,31 @@ The skill's `arduino_build.py` accepts short names (`esp32`, `esp32s3`, etc.) an
 
 ### S3 PSRAM / Flash / USB Options
 
-For ESP32-S3-N16R8 (16MB Flash + 8MB PSRAM), add build properties:
+For ESP32-S3-N16R8 (16MB Flash + 8MB PSRAM), pass the settings as **FQBN menu
+options** (preferred — this is what the Arduino IDE does):
 
 ```powershell
-arduino-cli compile --fqbn esp32:esp32:esp32s3 `
-  --build-property "build.flash_size=16MB" `
-  --build-property "build.psram_type=opi" `
-  --build-property "build.psram_size=8MB" `
-  --build-property "build.usb_mode=1" `
-  --build-property "build.cdc_on_boot=1" `
-  <project-dir>
+arduino-cli compile --fqbn esp32:esp32:esp32s3:FlashSize=16M,PSRAM=opi,USBMode=hwcdc,CDCOnBoot=cdc <project-dir>
 ```
 
-Or via FQBN menu options (preferred):
+```
+esp32:esp32:esp32s3:FlashSize=16M,PSRAM=opi,USBMode=hwcdc,CDCOnBoot=cdc
+```
 
-```
-esp32:esp32:esp32s3:FlashSize=16MB,PSRAM=opi,USBMode=hwcdc,CDCOnBoot=cdc
-```
+> **Menu values are validated — copy them from `boards.txt`, not from the label.**
+> `FlashSize` takes `4M` / `8M` / `16M` / `32M`; `16MB` is rejected outright:
+> `invalid value '16MB' for option 'FlashSize'`. This one fails loudly, which is
+> the good case — missing `CDCOnBoot` fails silently.
+>
+> **Why menu options instead of `--build-property`?** The property names
+> `build.psram_type`, `build.flash_size`, `build.usb_mode`, `build.cdc_on_boot`
+> *are* real — they are exactly what `boards.txt` defines for these menus. The
+> catch is that one menu option sets **several** properties: `PSRAM=opi` also
+> sets `build.defines=-DBOARD_HAS_PSRAM`, and that define is what actually
+> enables the PSRAM controller. Passing only
+> `--build-property build.psram_type=opi` leaves PSRAM configured but *not
+> enabled*. (`build.psram_size` is the one name that does not exist anywhere.)
+> Use the menu options so the whole group is applied together.
 
 **USB Mode and USB CDC On Boot are both critical for S3:**
 

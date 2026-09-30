@@ -76,6 +76,8 @@ Some MicroPython builds support safe boot by holding GPIO0 (BOOT button) during 
 
 If all else fails:
 ```powershell
+# Offset 0x1000 is correct for the CLASSIC ESP32.
+# ESP32-S3 / ESP32-C3 firmware goes at 0x0 — use the offset from the download page.
 python -m esptool --port COM3 erase_flash
 python -m esptool --port COM3 --baud 460800 write_flash -z 0x1000 firmware.bin
 ```

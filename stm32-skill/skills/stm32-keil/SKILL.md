@@ -14,7 +14,7 @@ Use this skill for STM32F407VET6 firmware projects built with Keil MDK-uVision. 
 3. Read the device, macros, include paths, source groups, scatter/memory settings, and configured debug probe from the project. Do not assume them.
 4. Modify only the requested source surface (user code). Preserve unrelated code, CubeMX `USER CODE` regions, comments, copyright headers, and project layout.
 5. Compile: `python scripts/keil_build.py <project-dir-or-uvprojx>`. Report warnings separately from errors.
-6. Flash: `python scripts/stm32_flash.py <project-dir>`. The script finds the built `.hex` under the project, selects the backend from the detected probe, and always uses SWD at 500 kHz. Confirm the target before flashing.
+6. Flash: `python scripts/stm32_flash.py <project-dir>`. The script finds the built `.hex` under the project, selects the backend from the detected probe, and starts SWD at 500 kHz, automatically retrying slower (200/100/50 kHz) if the RAMCode/speed check fails. Confirm the target before flashing.
 7. Verify: capture serial with `python scripts/serial_monitor.py --port <port> --baud 115200 --duration 6`, and/or observe the physical board. Distinguish "compiled/flashed" from "hardware behavior verified".
 
 ## Core Rules
@@ -110,9 +110,11 @@ Before flashing, run `python scripts/detect_probe.py` and confirm the probe and 
   g
   exit
   ```
-  Speed **500 kHz** is mandatory on this board — 1000 kHz+ fails with
-  `Verification of RAMCode failed @ 0x20000000`. The hex is copied to an
-  ASCII-only temp path first (project paths may contain non-ASCII chars).
+  The verified-stable rate on this board is **500 kHz**; 1000 kHz+ fails with
+  `Verification of RAMCode failed @ 0x20000000`. `stm32_flash.py` therefore
+  starts at 500 kHz and auto-retries at 200/100/50 kHz if the RAMCode check
+  fails, so a transient failure does not need a manual re-run. The hex is copied
+  to an ASCII-only temp path first (project paths may contain non-ASCII chars).
 - **ST-LINK (extension)**: `ST-LINK_CLI.exe -c SWD UR -P <firmware>.hex -Rst`.
 - **DAPLink (extension)**: drag-and-drop MSD or pyOCD/OpenOCD per the installed toolchain.
 - Always SWD (JTAG is unavailable). Flash algorithm for this device: `STM32F4xx_512.FLM` at 0x08000000, size 0x80000.
@@ -150,7 +152,7 @@ examples/<name>/
 
 - `blink`: user LED (PA1) periodic toggle — validates GPIO, build, flash.
 - `rgy_flow`: external RGY LEDs (R=PA0, Y=PA1, G=PA3) running light — **fully verified on board** (ODR 0x01/0x02/0x08 cycle).
-- `uart_echo`: USART1 serial echo with printf retarget.
+- `uart_echo`: USART1 byte echo (banner + per-byte `HAL_UART_Transmit`; **no printf retarget** — see `assets/snippets/uart_retarget.c` for that pattern).
 - `pwm_led`: TIM2_CH2 (PA1) breathing LED — validates TIM/PWM.
 
 When applying an example, copy only the needed pattern; preserve the user's layout and local style.

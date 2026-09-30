@@ -13,8 +13,13 @@ Serial communication verification. Echoes received text back to the serial monit
 ## Build & Flash
 
 ```powershell
-python scripts\arduino_build.py examples\serial_echo --board esp32s3
-python scripts\arduino_upload.py examples\serial_echo --port COM6 --board esp32s3
+# 0. Detect the board and port first — never copy a port number from a doc
+python scripts\detect_board.py
+
+# S3 needs CDCOnBoot=cdc or the native-USB serial port stays silent (no error).
+# The echo below can only be observed if that option is set.
+python scripts\arduino_build.py examples\serial_echo --fqbn "esp32:esp32:esp32s3:PSRAM=opi,USBMode=hwcdc,CDCOnBoot=cdc"
+python scripts\arduino_upload.py examples\serial_echo --port <PORT> --fqbn "esp32:esp32:esp32s3:PSRAM=opi,USBMode=hwcdc,CDCOnBoot=cdc"
 ```
 
 ## Usage

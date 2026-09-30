@@ -45,26 +45,33 @@ GPIO48 同时是 WS2812 数据线和 Octal PSRAM 的 **SPICLK_N**，二者不能
 | 引脚 | 限制 |
 |------|------|
 | **GPIO26–GPIO32** | Octal SPI Flash/PSRAM 专用（SPICS1/SPIHD/SPIWP/SPICS0/SPICLK/SPIQ/SPID），**禁止用作普通 IO** |
+| **GPIO33–GPIO37** | 八线（Octal）器件时接 `SPIIO4~SPIIO7 / SPIDQS`。ESP-IDF 明确标注：内嵌 ESP32-S3R8/S3R8V 的板子**不推荐**他用。本板未实测，但请优先避开这几个脚 |
+| **GPIO48** | 板载 WS2812；IO-MUX 上同时是 SPICLK_N。**实测**：启用 OPI PSRAM 时 WS2812 点不亮，禁用 PSRAM 才可用（详见上文） |
 | GPIO19 / GPIO20 | 原生 USB D- / D+，使用 USB 串口时不可用作 GPIO |
 | GPIO22–GPIO25 | QFN56 封装上不存在 |
 | GPIO0 | BOOT 按键，Strapping，拉低=下载模式 |
-| GPIO45 / GPIO46 | Strapping 引脚；GPIO46 启动时须为低（SPI 启动） |
+| GPIO45 / GPIO46 | Strapping 引脚。GPIO46 内部为**弱下拉**：仅进入串口下载模式时须为低/悬空，**正常 SPI 启动（GPIO0 高）时被忽略** |
 
 > 注意：本板使用 Octal SPI，**GPIO6–GPIO11 可作为普通 GPIO 使用**（Quad SPI 板才占用 6–11）。
+> GPIO47 常被引用为 SPICLK_P，但本板未验证它被占用 —— 在实测之前不要把它写进"禁用引脚"。
+> 注意：板子丝印会把每个引脚的**复用功能名**都印出来（例如 GPIO9 印 `FSPIHD/SUBSPIHD/TOUCH9`），
+> 所以"丝印上写着 SPICLK_P/N"只说明那是它的一个复用功能，**不等于**该引脚被 PSRAM 占用。
 
 ## Strapping 引脚
 
 - **GPIO0**：启动时低 = 下载模式；高 = SPI Flash 启动
 - **GPIO45**：启动配置（VDD_SPI 电压选择）
-- **GPIO46**：启动时低 = SPI 启动；LOG 引脚
+- **GPIO46**：内部**弱下拉**。仅进入串口下载模式时须为低/悬空；**正常 SPI 启动（GPIO0 高）时被忽略**，不需要拉高
 
 启动时这些引脚不要用外部电路强制拉到非默认电平。
 
 ## ADC / 触摸
 
-- **ADC1**：GPIO0–GPIO7、GPIO16–GPIO21（WiFi 开启时仍可用，优先使用）
-- **ADC2**：GPIO 若干，**WiFi 开启时不可用**
-- 分辨率 12bit，输入范围 0–3.3V，`analogSetPinAttenuation(pin, ADC_11db)` 扩展量程
+- **ADC1**：GPIO1–GPIO10（CH0–CH9），WiFi 开启时仍可用，优先使用
+- **ADC2**：GPIO11–GPIO20（CH0–CH9），通道号 = GPIO 号 − 11。**ADC2 同样被 WiFi 占用**：ESP-IDF 明确说明 `adc2_get_raw()` 在 `esp_wifi_start()` 到 `esp_wifi_stop()` 期间**可能读取失败** —— 这一点和经典 ESP32 一样，WiFi 开启时不要依赖 ADC2
+- **有 ADC 的引脚**：GPIO1–GPIO20 连续排布（GPIO14/15/16 = ADC2_CH3/CH4/CH5）；**GPIO0、GPIO21 没有 ADC 功能**
+- 分辨率 12bit，`analogSetPinAttenuation(pin, ADC_11db)` 为最大量程；
+  注意 11 dB 档实际满量程约 **3.1V**（0–3100mV），接近 3.3V 处会饱和截断
 - 触摸通道：TOUCH1–TOUCH14（GPIO1–14 中多个引脚）
 
 ## 完整引脚分配
@@ -79,18 +86,19 @@ GPIO48 同时是 WS2812 数据线和 Octal PSRAM 的 **SPICLK_N**，二者不能
 | GPIO5 | ADC1_4 / TOUCH5 / RTC |
 | GPIO6 | ADC1_5 / TOUCH6 / RTC |
 | GPIO7 | ADC1_6 / TOUCH7 / RTC |
-| GPIO15 | ADC2_3 / U0RTS / RTC / XTAL_32K_P |
-| GPIO16 | ADC2_4 / U0CTS / RTC / XTAL_32K_N |
-| GPIO17 | ADC2_5 / U1TXD / RTC / CLK_OUT3 |
-| GPIO18 | ADC2_6 / U1RXD / RTC / CLK_OUT1 |
+| GPIO15 | ADC2_4 / U0RTS / RTC / XTAL_32K_P |
+| GPIO16 | ADC2_5 / U0CTS / RTC / XTAL_32K_N |
+| GPIO17 | ADC2_6 / U1TXD / RTC / CLK_OUT3 |
+| GPIO18 | ADC2_7 / U1RXD / RTC / CLK_OUT1 |
 | GPIO8 | ADC1_7 / TOUCH8 / RTC |
-| GPIO46 | LOG |
+| GPIO46 | LOG（ROM 日志相关 strapping 引脚；正常启动时不参与启动模式判断） |
+| GPIO3 | JTAG / ADC1_2 / TOUCH3 / RTC（Strapping：JTAG 信号源选择） |
 | GPIO9 | ADC1_8 / TOUCH9 / FSPIHD |
 | GPIO10 | ADC1_9 / TOUCH10 / FSPICS0 |
 | GPIO11 | ADC2_0 / TOUCH11 / FSPIID |
 | GPIO12 | ADC2_1 / TOUCH12 / FSPICLK |
 | GPIO13 | ADC2_2 / TOUCH13 / FSPIQ |
-| GPIO14 | ADC2_3 / TOUCH14 / FSPIWP |
+| GPIO14 | ADC2_3 / TOUCH14 / FSPIWP（ADC2 通道号 = GPIO 号 − 11） |
 | 5V0 | 5V 电源 |
 | GND | 地 |
 
@@ -101,8 +109,8 @@ GPIO48 同时是 WS2812 数据线和 Octal PSRAM 的 **SPICLK_N**，二者不能
 | GND | 地 |
 | GPIO43 | U0TXD / CLK_OUT1 |
 | GPIO44 | U0RXD / CLK_OUT2 |
-| GPIO1 | TOUCH1 / ADC1_0 / RTC |
-| GPIO2 | TOUCH2 / ADC1_1 / RTC |
+| GPIO1 | ADC1_0 / TOUCH1 / RTC |
+| GPIO2 | ADC1_1 / TOUCH2 / RTC |
 | GPIO42 | MTMS |
 | GPIO41 | MTDI / CLK_OUT1 |
 | GPIO40 | MTDO / CLK_OUT2 |
@@ -119,6 +127,11 @@ GPIO48 同时是 WS2812 数据线和 Octal PSRAM 的 **SPICLK_N**，二者不能
 | GPIO20 | USB_D+ / U1CTS / ADC2_9 / CLK_OUT1 |
 | GPIO19 | USB_D- / U1RTS / ADC2_8 / CLK_OUT2 |
 | GND | 地 |
+
+> ⚠️ **两张引脚表列的是排针丝印上的复用功能名，不等于该脚可以随便用。**
+> 例如 **GPIO35/36/37** 丝印写着 `SPIIO6 / FSPIIO7 / SPIDQS`，那正是八线 PSRAM 的
+> `SPIIO4~SPIIO7 / SPIDQS` 信号，按 ESP-IDF 的说明应优先避开（见上文"禁用/受限引脚"）；
+> GPIO48 的 `SPICLK_N / RGB LED` 与 OPI PSRAM 也是二选一（已实测）。
 
 ## Arduino 配置
 

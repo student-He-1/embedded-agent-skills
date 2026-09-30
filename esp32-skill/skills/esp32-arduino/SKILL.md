@@ -38,23 +38,27 @@ Use this skill for ESP32 / ESP32-S3 firmware projects that use the Arduino frame
 - GPIO1 (TX0) and GPIO3 (RX0) are used for USB-serial (REPL / upload). Repurposing them breaks serial upload and debug output.
 - Onboard LED is typically GPIO2 on most dev boards, but verify per board.
 
-### ESP32-S3 (RISC-V dual-core)
+### ESP32-S3 (Xtensa LX7 dual-core)
 
 - **Flash/PSRAM pins depend on board design**:
   - Boards with **Octal PSRAM** (e.g. ESP32-S3-WROOM-1-N16R8): GPIO26–GPIO32 are used for Octal SPI Flash/PSRAM (SPICS1/SPIHD/SPIWP/SPICS0/SPICLK/SPIQ/SPID). **Do not use GPIO26–32.** GPIO6–GPIO11 are available as normal GPIO on these boards.
   - Boards with **Quad PSRAM/Flash**: GPIO6–GPIO11 are used for SPI flash. Do not use.
 - GPIO19 and GPIO20 are USB D-/D+ when USB-Serial/JTAG is enabled. Do not use for GPIO if using USB serial.
-- GPIO0, GPIO3, GPIO45, GPIO46 are strapping pins. GPIO46 must be low at boot for normal SPI boot. GPIO0 is the BOOT button on most dev boards.
+- GPIO0, GPIO3, GPIO45, GPIO46 are strapping pins. **In normal SPI boot (GPIO0 high) GPIO46 is ignored.** It only has to be low/floating to enter the serial bootloader, so do not drive it high "for safety" — and do not assume it is read at boot. It has an internal **weak pull-down** (GPIO0 has a weak pull-up; low at reset = download mode). GPIO0 is the BOOT button on most dev boards.
 - GPIO22–GPIO25 do not exist on QFN56 package.
-- **GPIO48 WS2812 vs PSRAM trade-off** (ESP32-S3-WROOM-1-N16R8): GPIO48 has a WS2812 RGB LED but is also SPICLK_N for Octal PSRAM. This is a compile-time choice, not a hard rule:
-  - **Default**: enable OPI PSRAM (`PSRAM=opi`) for 8MB extra RAM. The onboard WS2812 will not be usable.
+- **GPIO48 WS2812 vs PSRAM trade-off** (ESP32-S3-WROOM-1-N16R8): GPIO48 carries the onboard WS2812 RGB LED and is also the IO-MUX function SPICLK_N. **Verified on this board**: with `PSRAM=opi` the WS2812 does not light; with `PSRAM=disabled` it works via Adafruit_NeoPixel. So treat it as an either/or:
+  - **Default**: enable OPI PSRAM (`PSRAM=opi`) for 8MB extra RAM — the onboard WS2812 is then unavailable (observed on hardware).
   - **If the project needs the onboard RGB LED**: disable PSRAM (`PSRAM=disabled`) and use Adafruit_NeoPixel on GPIO48.
   - Choose based on project requirements. Do not silently disable PSRAM; explain the trade-off.
   - For projects that need both PSRAM and an LED, use an external LED on another GPIO pin.
-- GPIO46 is often labeled "LOG" on dev boards (debug log output).
+  - Note: GPIO47 is the matching SPICLK_P IO-MUX function, but nothing on this board has shown it to be reserved — do **not** claim GPIO47 is unusable without testing it. Only GPIO48's WS2812 conflict is verified.
+- GPIO46 is silkscreened **LOG** on these boards (confirmed on the ESP32-S3-N16R8 pinout) — it is the strapping pin associated with ROM log output. This does not contradict the boot-mode rule above: the LOG function is why the pin is labelled that way, while for *boot mode selection* it is simply not read in normal SPI boot.
 - ESP32-S3-N16R8 = 16MB Flash + 8MB Octal PSRAM. Select `ESP32S3 Dev Module` with PSRAM = OPI PSRAM. Recommended FQBN: `esp32:esp32:esp32s3:PSRAM=opi,USBMode=hwcdc,CDCOnBoot=cdc`.
 - **`CDCOnBoot=cdc` is mandatory for serial output on the native USB port.** `USBMode=hwcdc` alone does not map `Serial` onto USB: with the default `CDCOnBoot=Disabled`, `Serial` is still `HardwareSerial` (UART0 → GPIO43/44), so the port stays completely silent with no build error. Do not conclude "the sketch didn't run / the board is broken" before checking this.
-- ADC1 pins: GPIO0–GPIO7, GPIO16–GPIO21. ADC2 is unavailable when WiFi is on.
+- ADC: **ADC1 = GPIO1–GPIO10** (CH0–CH9), **ADC2 = GPIO11–GPIO20** (CH0–CH9), i.e. ADC2 channel = GPIO number − 11. Do not confuse this with the classic ESP32 map (ADC1 = GPIO32–39).
+  - **ADC2 is also used by WiFi — exactly like the classic ESP32.** ESP-IDF documents that `adc2_get_raw()` reading **may fail between `esp_wifi_start()` and `esp_wifi_stop()`**. Prefer ADC1 whenever WiFi may be active. Do not claim S3 lifts this restriction.
+  - GPIO0 and GPIO21 have **no** ADC function. GPIO14 / GPIO15 / GPIO16 all **do** (ADC2_CH3 / CH4 / CH5) — do not strip them from the pin table.
+  - 11 dB attenuation saturates near **3.1 V**, not 3.3 V (measurable range 0–3100 mV).
 
 ### ESP32-C3 (RISC-V single-core)
 
@@ -76,7 +80,7 @@ ESP32 Arduino runs on top of FreeRTOS. If the project uses `xTaskCreate`, `xQueu
 
 - Respect existing task priorities and core affinities. Do not move tasks between cores without understanding the impact.
 - Keep ISRs short. Use `portENTER_CRITICAL` / `portEXIT_CRITICAL` for shared variable access.
-- Do not call `delay()` inside an ISR. Use `vTaskDelayFromISR` or defer work to a task.
+- Do not call `delay()` inside an ISR. There is no ISR-safe sleep — you cannot block in an ISR at all. Defer the work: notify a task (`xTaskNotifyFromISR` + `vTaskNotifyGiveFromISR`), give a semaphore (`xSemaphoreGiveFromISR`), or set a flag and return.
 - `loop()` runs in `loopTask` on core 1 (classic) / core 0 (S3). Blocking `loop()` with long operations prevents WiFi/BT background tasks from running.
 
 ## Ambiguous Requests

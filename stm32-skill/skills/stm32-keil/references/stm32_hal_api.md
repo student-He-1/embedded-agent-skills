@@ -9,7 +9,9 @@ but unverified on this board; prefer HSI unless HSE is confirmed.
 - `HAL_RCC_OscConfig`: HSI on, PLL none.
 - `HAL_RCC_ClockConfig`: SYSCLK=HSI, AHB=/1, APB1=/4, APB2=/2, latency FLASH_LATENCY_0.
 - Timer clock: when APB prescaler != 1, the timer clock = APBx_clk * 2.
-  On HSI path: APB1=4 MHz -> timer clock 8 MHz; APB2=8 MHz -> 8 MHz.
+  On HSI path: APB1=4 MHz (/-4) -> timer clock 8 MHz;
+  APB2=8 MHz (/-2) -> timer clock 16 MHz.
+  **Do not forget the x2 on APB2** — TIM1/TIM8..TIM11 run at 16 MHz here, not 8 MHz.
 
 ## GPIO
 
@@ -73,18 +75,33 @@ With MicroLIB the retarget uses `#if !defined(OS_USE_SEMIHOSTING)` /
 
 ## TIM / PWM
 
-- Use a timer channel in PWM mode. On the board, PA1 (backlight D2) is TIM2_CH2
-  on F407? Verify in the device header; the TFT backlight PB1 = TIM3_CH4.
-- Sequence: enable timer clock -> set prescaler/period -> set compare mode ->
-  `HAL_TIM_PWM_Start(&htim, TIM_CHANNEL_x)`. Duty = compare / (period+1).
-- On HSI path timer clock = 8 MHz; pick PSC/ARR for the desired frequency.
+- Use a timer channel in PWM mode. Confirmed on this board: **PA1 = TIM2_CH2**
+  (GPIO `GPIO_PIN_1`, `GPIO_AF1_TIM2`); the TFT backlight **PB1 = TIM3_CH4**.
+  Both live on APB1, so their timer clock is 8 MHz (see clock tree above).
+- Sequence: enable timer + GPIO clock -> configure the pin as
+  `GPIO_MODE_AF_PP` with the right `Alternate` -> base init -> channel config ->
+  start. Duty = compare / (period+1).
 
 ```c
+__HAL_RCC_TIM2_CLK_ENABLE();
 htim.Init.Prescaler = psc;
-htim.Init.Period = arr;
-HAL_TIM_PWM_Init(&htim, ...);
+htim.Init.Period    = arr;
+htim.Init.CounterMode = TIM_COUNTERMODE_UP;
+HAL_TIM_Base_Init(&htim);                     /* 1 argument */
+
+TIM_OC_InitTypeDef oc = {0};
+oc.OCMode     = TIM_OCMODE_PWM1;
+oc.Pulse      = 0;
+oc.OCPolarity = TIM_OCPOLARITY_HIGH;
+HAL_TIM_PWM_ConfigChannel(&htim, &oc, TIM_CHANNEL_x);   /* channel goes here */
+HAL_TIM_PWM_Start(&htim, TIM_CHANNEL_x);
+
 __HAL_TIM_SET_COMPARE(&htim, TIM_CHANNEL_x, duty);
 ```
+
+> `HAL_TIM_PWM_Init(&htim, TIM_CHANNEL_x)` is **not** a valid call — the HAL PWM
+> init takes only the handle. The channel belongs to `ConfigChannel` / `Start`.
+> See `examples/pwm_led/Core/Src/main.c` for a complete working version.
 
 ## ADC / I2C / SPI / USB
 

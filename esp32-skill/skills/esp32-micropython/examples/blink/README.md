@@ -1,6 +1,6 @@
 # blink — LED Blink
 
-Minimal MicroPython example that blinks the onboard LED. Use this to verify your toolchain, file upload, and board work correctly.
+Minimal MicroPython example that blinks an LED on GPIO2. Use this to verify your toolchain, file upload, and board work correctly.
 
 ## Files
 
@@ -29,8 +29,13 @@ python scripts/mp_file_manager.py upload examples\blink --port COM3 --reset
 
 ## Expected Behavior
 
-- The onboard LED (GPIO2) blinks on/off every 500ms.
-- Serial output at 115200 baud: `Blink example starting on GPIO 2`
+- The LED on **GPIO2** blinks on/off every 500 ms.
+  On a classic ESP32 DevKit that is the onboard LED; on **ESP32-S3 the onboard
+  WS2812 is on GPIO48 and this example will not light it** (see the pin list
+  below), so wire an external LED to GPIO2 or change `LED_PIN`.
+- `main.py` produces **no serial output** — it only drives the pin. Observe the
+  LED, or check the pin with
+  `mpremote connect COM3 exec "from machine import Pin; print(Pin(2).value())"`.
 
 ## Customize
 
@@ -38,7 +43,7 @@ python scripts/mp_file_manager.py upload examples\blink --port COM3 --reset
   - ESP32 DevKit / NodeMCU: GPIO2
   - ESP32-C3-DevKitM: GPIO8
   - ESP32-S3-DevKitC: GPIO48 is WS2812 (not a regular LED — use RMT/LEDC driver)
-- **Blink speed**: Change `time.sleep_ms(500)` values.
+- **Blink speed**: change the two `time.sleep(0.5)` values in `main.py` (seconds).
 
 ## Troubleshooting
 

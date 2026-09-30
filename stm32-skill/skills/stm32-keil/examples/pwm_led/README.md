@@ -13,7 +13,9 @@ smooth breathing fade.
 ## Timer math (HSI 16 MHz path)
 - APB1 = 4 MHz, timer clock = 8 MHz (APB prescaler != 1 -> x2).
 - PSC = 7  -> 1 MHz tick.
-- ARR = 999 -> 1 kHz PWM. Duty sweeps 0..1000 every 5 ms step.
+- ARR = 999 -> 1 kHz PWM.
+- Duty sweeps 0..999 with `step = 8` every 5 ms, so one direction takes
+  ~125 steps ≈ 0.63 s.
 
 ## Build
 ```
@@ -30,4 +32,4 @@ D2 should breathe (brighten/dim) continuously. No serial output.
 
 ## Validation level
 - Compile: OK (0 error, 0 warning).
-- Flash / on-board: not yet flashed in the skill harness.
+- Flash / on-board: **not flashed in the skill harness** — PWM output not observed on hardware.

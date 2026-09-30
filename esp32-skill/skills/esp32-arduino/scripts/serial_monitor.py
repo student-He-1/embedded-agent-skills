@@ -102,7 +102,7 @@ def monitor(port: str, baud: int, duration: float, show_timestamp: bool = False,
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Serial monitor for ESP32")
-    parser.add_argument("--port", required=True, help="Serial port (e.g. COM6)")
+    parser.add_argument("--port", help="Serial port (e.g. COM6); not needed with --list")
     parser.add_argument("--baud", type=int, default=115200, help="Baud rate (default 115200)")
     parser.add_argument("--duration", type=float, default=10, help="Duration in seconds (default 10)")
     parser.add_argument("--timestamp", action="store_true", help="Show timestamps")
@@ -119,6 +119,9 @@ def main() -> None:
         else:
             print("No serial ports found.")
         return
+
+    if not args.port:
+        parser.error("--port is required unless --list is used")
 
     monitor(args.port, args.baud, args.duration, args.timestamp, args.reset)
 
