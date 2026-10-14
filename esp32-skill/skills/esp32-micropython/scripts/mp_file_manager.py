@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """Upload / download MicroPython project files to an ESP32 board.
 
-Syncs a local project directory to the board flash filesystem using mpremote.
-Supports dry-run, selective upload, and directory creation.
+Syncs local Python files to the board filesystem using mpremote. Uploading a
+local root-level main.py over an existing board main.py requires an explicit
+confirmation flag.
 """
 
 from __future__ import annotations
@@ -36,6 +37,30 @@ def run_mpremote(port: str, *args: str, timeout: int = 30) -> tuple[int, str, st
         return completed.returncode, completed.stdout, completed.stderr
     except subprocess.TimeoutExpired:
         return -1, "", "mpremote timed out"
+    except OSError as exc:
+        return -1, "", str(exc)
+
+
+def remote_file_exists(port: str, remote_path: str) -> tuple[bool | None, str]:
+    """Check one exact remote path. None means the check itself failed."""
+    remote_path = "/" + remote_path.lstrip("/")
+    code = (
+        "import os\n"
+        f"path = {remote_path!r}\n"
+        "try:\n"
+        "    os.stat(path)\n"
+        "    print('__CODEX_FILE_EXISTS__')\n"
+        "except OSError:\n"
+        "    print('__CODEX_FILE_MISSING__')\n"
+    )
+    rc, out, err = run_mpremote(port, "exec", code, timeout=15)
+    if rc != 0:
+        return None, err.strip() or out.strip() or "remote file check failed"
+    if "__CODEX_FILE_EXISTS__" in out:
+        return True, ""
+    if "__CODEX_FILE_MISSING__" in out:
+        return False, ""
+    return None, out.strip() or "remote file check returned no status"
 
 
 def collect_files(root: Path, include_lib: bool = True) -> list[Path]:
@@ -105,16 +130,18 @@ def execute_actions(port: str, actions: list[FileAction], dry_run: bool = False)
     return success, fail
 
 
-def list_remote_files(port: str):
+def list_remote_files(port: str) -> bool:
     """List all files on the board recursively."""
     rc, out, err = run_mpremote(port, "fs", "ls", timeout=15)
     if rc == 0:
         print(out)
+        return True
     else:
         print(f"Error listing files: {err}", file=sys.stderr)
+        return False
 
 
-def reset_board(port: str, soft: bool = True):
+def reset_board(port: str, soft: bool = True) -> bool:
     """Reset the board."""
     if soft:
         code = "import machine; machine.soft_reset()"
@@ -123,8 +150,10 @@ def reset_board(port: str, soft: bool = True):
     rc, out, err = run_mpremote(port, "exec", code, timeout=10)
     if rc == 0:
         print("Board reset.")
+        return True
     else:
         print(f"Reset failed: {err}", file=sys.stderr)
+        return False
 
 
 def main():
@@ -137,6 +166,11 @@ def main():
     up.add_argument("--port", "-p", required=True, help="Serial port (e.g. COM3)")
     up.add_argument("--dry-run", action="store_true", help="Show actions without executing")
     up.add_argument("--reset", action="store_true", help="Soft-reset after upload")
+    up.add_argument(
+        "--allow-main-overwrite",
+        action="store_true",
+        help="Confirm replacement of an existing board main.py",
+    )
 
     # list
     ls = sub.add_parser("list", help="List files on board")
@@ -162,20 +196,43 @@ def main():
             sys.exit(1)
 
         actions = plan_upload(root, args.port, args.dry_run)
+        uploads_main = any(
+            act.action == "upload" and act.remote == "main.py" for act in actions
+        )
+        if uploads_main and not args.dry_run:
+            exists, error = remote_file_exists(args.port, "main.py")
+            if exists is None:
+                print(f"ERROR: cannot safely check board main.py: {error}", file=sys.stderr)
+                sys.exit(1)
+            if exists and not args.allow_main_overwrite:
+                print(
+                    "ERROR: board main.py already exists. Download/back it up, then "
+                    "rerun with --allow-main-overwrite to confirm replacing it.",
+                    file=sys.stderr,
+                )
+                sys.exit(2)
+            if exists:
+                print("WARNING: explicitly replacing the existing board main.py")
+
         print(f"Planned {len(actions)} action(s) for {root}")
         print("-" * 60)
         success, fail = execute_actions(args.port, actions, args.dry_run)
         print("-" * 60)
         print(f"Done: {success} ok, {fail} failed")
+        if fail:
+            sys.exit(1)
 
         if args.reset and not args.dry_run:
-            reset_board(args.port, soft=True)
+            if not reset_board(args.port, soft=True):
+                sys.exit(1)
 
     elif args.command == "list":
-        list_remote_files(args.port)
+        if not list_remote_files(args.port):
+            sys.exit(1)
 
     elif args.command == "reset":
-        reset_board(args.port, soft=not args.hard)
+        if not reset_board(args.port, soft=not args.hard):
+            sys.exit(1)
 
     elif args.command == "download":
         dest = args.local or args.remote

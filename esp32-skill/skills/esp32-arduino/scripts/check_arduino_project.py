@@ -26,7 +26,7 @@ class Message:
 CHIP_PIN_RULES: dict[str, dict[str, set[int]]] = {
     "esp32": {
         "flash_pins": {6, 7, 8, 9, 10, 11},   # SPI flash, never usable as GPIO
-        "input_only": {34, 35, 36, 39},
+        "input_only": {34, 35, 36, 37, 38, 39},
         "missing_pins": set(),
         "strapping_pins": {0, 2, 5, 12, 15},
     },
@@ -44,21 +44,14 @@ CHIP_PIN_RULES: dict[str, dict[str, set[int]]] = {
 # Order matters: "esp32s3" must be tested before "esp32".
 CHIP_MARKERS: list[tuple[str, tuple[str, ...]]] = [
     ("esp32s3", ("esp32s3", "esp32-s3")),
-    ("esp32", ("esp32",)),
+    ("esp32s2", ("esp32s2", "esp32-s2")),
+    ("esp32c3", ("esp32c3", "esp32-c3")),
+    ("esp32c6", ("esp32c6", "esp32-c6")),
+    ("esp32h2", ("esp32h2", "esp32-h2")),
+    # Only infer the classic chip from an explicit marker. A generic "ESP32"
+    # mention is not enough to distinguish it from S2/S3/C3/C6/H2.
+    ("esp32", ("esp32 classic", "classic esp32", "esp32 (classic)")),
 ]
-
-KNOWN_ESP32_LIBS = {
-    "WiFi.h", "WiFiClient.h", "WiFiServer.h", "WiFiUdp.h",
-    "BluetoothSerial.h", "BLEDevice.h", "BLEUtils.h", "BLEServer.h",
-    "Wire.h", "SPI.h", "HardwareSerial.h", "EEPROM.h",
-    "Preferences.h", "FS.h", "SPIFFS.h", "LittleFS.h", "SD.h",
-    "ESP32PWM.h", "ESP32Servo.h", "Ticker.h", "driver/ledc.h",
-    "Adafruit_NeoPixel.h", "Adafruit_GFX.h", "Adafruit_SSD1306.h",
-    "DHT.h", "OneWire.h", "DallasTemperature.h",
-    "PubSubClient.h", "ArduinoJson.h", "HTTPClient.h",
-    "WebServer.h", "ESPAsyncWebServer.h", "AsyncTCP.h",
-    "FastLED.h", "U8g2lib.h", "LiquidCrystal_I2C.h",
-}
 
 
 def read_text(path: Path) -> str:
@@ -80,11 +73,15 @@ def find_source_files(root: Path) -> list[Path]:
 
 
 def detect_chip(source_files: list[Path]) -> str:
-    """Best-effort chip inference from project sources. Returns "" when unknown."""
+    """Infer an explicitly named chip from project sources; otherwise return ""."""
     text = "\n".join(read_text(p).lower() for p in source_files)
     for chip, markers in CHIP_MARKERS:
         if any(marker in text for marker in markers):
             return chip
+    # Match the classic FQBN as a complete board identifier. A prefix-only
+    # match would incorrectly classify esp32:esp32:esp32c3 as classic ESP32.
+    if re.search(r"(?<![a-z0-9])esp32:esp32:esp32(?=$|[\s\"',:])", text):
+        return "esp32"
     return ""
 
 
@@ -149,11 +146,17 @@ def check_project(project_dir: Path, chip: str = "") -> list[Message]:
     rules = CHIP_PIN_RULES.get(chip)
     if rules:
         messages.append(Message("info", f"Chip: {chip} (use --chip to override)"))
+    elif chip:
+        messages.append(Message(
+            "info",
+            f"Chip identified as {chip}, but no pin rules are defined for it; "
+            "pin checks are skipped.",
+        ))
     else:
         messages.append(Message(
             "info",
             "Chip not determined - skipping chip-specific pin checks "
-            "(pass --chip esp32 / esp32s3 to enable them)",
+            "(pass --chip esp32 / esp32s3 to enable supported rules)",
         ))
 
     all_pins = set()
@@ -215,7 +218,7 @@ def main() -> None:
     parser.add_argument(
         "--chip",
         default="auto",
-        help="Target chip for pin checks: auto (infer from sources), esp32, esp32s3",
+        help="Target chip for pin checks: auto, esp32, esp32s3, esp32s2, esp32c3, esp32c6, esp32h2",
     )
     args = parser.parse_args()
 

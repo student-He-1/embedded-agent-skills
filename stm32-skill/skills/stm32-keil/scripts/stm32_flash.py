@@ -32,6 +32,12 @@ from pathlib import Path
 from typing import Optional
 import xml.etree.ElementTree as ET
 
+SCRIPT_DIR = Path(__file__).resolve().parent
+if str(SCRIPT_DIR) not in sys.path:
+    sys.path.insert(0, str(SCRIPT_DIR))
+
+from detect_probe import detect as detect_connected_probes  # noqa: E402
+
 # ---------------------------------------------------------------------------
 # Known tool locations
 # ---------------------------------------------------------------------------
@@ -123,6 +129,38 @@ def find_tool(paths: list[str], name: str) -> Optional[str]:
         if Path(p).exists():
             return p
     return shutil.which(name)
+
+
+def detect_flash_backend() -> tuple[str, str]:
+    """Select a backend only when exactly one supported probe is detected."""
+    try:
+        probes, _ = detect_connected_probes()
+    except Exception as exc:
+        return "", f"Probe detection failed: {exc}"
+
+    if len(probes) != 1:
+        return "", (
+            f"Expected exactly one connected debug probe, detected {len(probes)}. "
+            "Disconnect all probes except the intended target and rerun detection; "
+            "--probe selects a backend family, not a probe serial number."
+        )
+
+    probe = probes[0]
+    if probe.confidence not in ("confirmed", "likely"):
+        return "", (
+            f"Probe detection is inconclusive ({probe.type}, {probe.confidence}). "
+            "Run detect_probe.py and resolve the target before flashing."
+        )
+    if probe.type not in ("jlink", "stlink"):
+        return "", (
+            f"Detected {probe.type}, but this script supports J-Link and ST-Link "
+            "flash backends only."
+        )
+
+    label = probe.model or probe.type
+    if probe.serial:
+        label += f" serial={probe.serial}"
+    return probe.type, f"Auto-selected {probe.type} backend from detected {label}."
 
 
 # ---------------------------------------------------------------------------
@@ -370,7 +408,8 @@ def main() -> None:
     ap.add_argument("--file", help="Explicit image (.hex/.axf/.bin)")
     ap.add_argument("--probe", choices=["jlink", "stlink", "auto"], default="auto")
     ap.add_argument("--device", default="", help="J-Link device, e.g. STM32F407VE")
-    ap.add_argument("--interface", default="SWD", choices=["SWD", "JTAG"])
+    ap.add_argument("--interface", default="SWD", choices=["SWD"],
+                    help="This board supports SWD only")
     ap.add_argument("--speed", type=int, default=500,
                     help="SWD speed in kHz (500 is the verified-stable rate on "
                          "this J-Link OB board; >=1000 can fail RAMCode verify)")
@@ -406,8 +445,12 @@ def main() -> None:
 
     # Pick backend
     probe = args.probe
+    probe_note = ""
     if probe == "auto":
-        probe = "jlink" if find_tool(JLINK_PATHS, "JLink.exe") else "stlink"
+        probe, probe_note = detect_flash_backend()
+        if not probe:
+            print(f"ERROR: {probe_note}", file=sys.stderr)
+            sys.exit(2)
 
     res = FlashResult(
         project=str(project_dir),
@@ -419,6 +462,8 @@ def main() -> None:
         ran_after_flash=not args.no_run,
         command="",
     )
+    if probe_note:
+        res.messages.append(probe_note)
 
     if probe == "jlink":
         res = flash_jlink(res, image, args.dry_run)

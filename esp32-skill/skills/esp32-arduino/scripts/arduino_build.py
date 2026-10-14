@@ -9,25 +9,11 @@ import subprocess
 import sys
 from pathlib import Path
 
+SCRIPT_DIR = Path(__file__).resolve().parent
+if str(SCRIPT_DIR) not in sys.path:
+    sys.path.insert(0, str(SCRIPT_DIR))
 
-DEFAULT_ARDUINO_CLI_PATHS = [
-    r"E:\Program Files\Arduino IDE\resources\app\lib\backend\resources\arduino-cli.exe",
-    r"C:\Program Files\Arduino IDE\resources\app\lib\backend\resources\arduino-cli.exe",
-    "arduino-cli",
-]
-
-
-def find_arduino_cli() -> str | None:
-    import shutil
-    for p in DEFAULT_ARDUINO_CLI_PATHS:
-        if "\\" in p or "/" in p:
-            if Path(p).exists():
-                return p
-        else:
-            found = shutil.which(p)
-            if found:
-                return found
-    return None
+from detect_board import find_arduino_cli  # noqa: E402
 
 
 FQBN_MAP = {
@@ -105,9 +91,9 @@ def compile_project(
 def main() -> None:
     parser = argparse.ArgumentParser(description="Compile ESP32 Arduino project")
     parser.add_argument("project_dir", help="Path to the Arduino project directory")
-    parser.add_argument("--fqbn", default="esp32:esp32:esp32s3",
-                        help="Full FQBN or short name (esp32, esp32s3, etc.)")
-    parser.add_argument("--board", help="Short board name (alternative to --fqbn)")
+    target = parser.add_mutually_exclusive_group(required=True)
+    target.add_argument("--fqbn", help="Full FQBN (for example esp32:esp32:esp32s3)")
+    target.add_argument("--board", help="Short board name (esp32, esp32s3, etc.)")
     parser.add_argument("--build-property", action="append", default=[],
                         help="Extra build properties (can repeat)")
     parser.add_argument("--verbose", action="store_true")

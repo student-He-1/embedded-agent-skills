@@ -316,7 +316,7 @@ Run bundled scripts with Python 3.10 or newer. Requires `mpremote` (`pip install
 
 - `python scripts/detect_board.py`: detect connected ESP32, confirm MicroPython version, list board filesystem.
 - `python scripts/check_mp_project.py <project-dir>`: static check of local MicroPython project files.
-- `python scripts/mp_file_manager.py upload <project-dir> --port COM3`: upload project files to board. (Subcommands: `upload`, `list`, `reset`, `download`; add `--dry-run` to preview or `--reset` to soft-reset afterwards.)
+- `python scripts/mp_file_manager.py upload <project-dir> --port COM3`: upload project files to board. Existing board `main.py` is protected by default; after backing it up, pass `--allow-main-overwrite` to confirm replacement. (Subcommands: `upload`, `list`, `reset`, `download`; add `--dry-run` to preview or `--reset` to soft-reset afterwards.)
 - `python scripts/serial_monitor.py --list`: list serial ports and exit.
 - `python scripts/serial_monitor.py -p COM3 -b 115200 [--duration N]`: open the
   serial monitor. **`--duration` defaults to `0` = run forever** — always pass

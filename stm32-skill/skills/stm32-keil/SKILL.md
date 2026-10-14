@@ -164,7 +164,7 @@ Run bundled scripts with Python 3.10+ (pyserial required for serial tools; if mi
 - `python scripts/detect_probe.py [--json]`: read-only probe/serial enumeration (PnP + pyserial). Empty result is explicitly inconclusive.
 - `python scripts/check_keil_project.py <project-dir-or-uvprojx> [--json]`: static checks for device, source groups/files, include paths, macros, memory/scatter settings, optimization, and configured probe.
 - `python scripts/keil_build.py <project-dir-or-uvprojx>`: wraps `UV4.exe -b ... -j0 -o build.log`; separates warnings from errors and maps UV4 return codes.
-- `python scripts/stm32_flash.py <project-dir> [--probe jlink|stlink|daplink] [--speed 500]`: locates the built `.hex`, flashes via the detected probe over SWD (500 kHz default), resets and runs.
+- `python scripts/stm32_flash.py <project-dir> [--probe auto|jlink|stlink] [--speed 500]`: locates the built `.hex`; `auto` requires exactly one detected J-Link or ST-Link, otherwise select the backend explicitly after running `detect_probe.py`. DAPLink is detected but not supported by this flash script. SWD only (500 kHz default), then reset and run.
 - `python scripts/serial_monitor.py --port <PORT> --baud 115200 --duration 6 [--send TEXT]`: fixed-duration serial capture, optional transmit. `<PORT>` comes from `detect_probe.py` and is machine-specific.
 - `python scripts/list_examples.py`: lists packaged examples from `examples/*/README.md`.
 
